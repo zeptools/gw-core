@@ -3,6 +3,7 @@ package schedjobs
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -34,6 +35,7 @@ func (s *Scheduler) Start() {
 	ctx, cancel := context.WithCancel(context.Background()) // With cancel(), it notifies all goroutines waiting on ctx.Done()
 	s.cancel = cancel
 	go s.loop(ctx)
+	log.Println("[INFO] job scheduler started")
 }
 
 func (s *Scheduler) Stop() {
@@ -41,6 +43,7 @@ func (s *Scheduler) Stop() {
 		s.cancel()
 	}
 	s.wg.Wait() // wait for running tasks
+	log.Println("[INFO] job scheduler stopped")
 }
 
 func (s *Scheduler) loop(ctx context.Context) {
