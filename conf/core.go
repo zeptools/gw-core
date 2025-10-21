@@ -9,6 +9,7 @@ import (
 	"github.com/zeptools/gw-core/db"
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/db/sqldb"
+	"github.com/zeptools/gw-core/schedjobs"
 )
 
 type Core struct {
@@ -25,7 +26,8 @@ type Core struct {
 	MainDBPlaceholder  func(...int) string        `json:"-"`
 	MainDBPlaceholders func(int, ...int) []string `json:"-"`
 	HttpClient         *http.Client               `json:"-"`
-	SessionLocks       *sync.Map                  `json:"-"`          // map[string]*sync.Mutex
+	SessionLocks       *sync.Map                  `json:"-"` // map[string]*sync.Mutex
+	JobScheduler       *schedjobs.Scheduler       `json:"-"`
 	DebugOpts          DebugOpts                  `json:"debug_opts"` // Do not promote
 }
 
