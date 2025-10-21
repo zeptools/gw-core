@@ -19,6 +19,13 @@ type Scheduler struct {
 	OnDeleteCronJob    func(job *CronJob)
 }
 
+func NewScheduler() *Scheduler {
+	return &Scheduler{
+		oneTimeJobs: make(map[int64][]*OneTimeJob),
+		cronJobs:    []*CronJob{},
+	}
+}
+
 func (s *Scheduler) Start() {
 	if s.cancel != nil {
 		return // already started
