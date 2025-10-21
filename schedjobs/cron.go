@@ -9,7 +9,9 @@ type CronJob struct {
 	Weekdays    uint8  // 7 bits
 	DaysOfMonth uint32 // 31 bits
 	Task        func() error
-	OnFinish    func(error)
+	// Job-specific callbacks
+	OnAdded    func()
+	OnFinished func(error)
 }
 
 func (job *CronJob) Matches(now time.Time) bool {
@@ -35,10 +37,42 @@ const (
 	AllDaysOfMonth uint32 = 0x7FFFFFFF        // 31 bits set
 )
 
-func BitsFromList(list []int) uint64 {
+func BitsFromMinutes(list []int) uint64 {
 	var bits uint64
 	for _, v := range list {
-		bits |= 1 << v
+		if v >= 0 && v < 60 {
+			bits |= 1 << v
+		}
+	}
+	return bits
+}
+
+func BitsFromHours(list []int) uint32 {
+	var bits uint32
+	for _, v := range list {
+		if v >= 0 && v < 24 {
+			bits |= 1 << v
+		}
+	}
+	return bits
+}
+
+func BitsFromWeekdays(list []int) uint8 {
+	var bits uint8
+	for _, v := range list {
+		if v >= 0 && v < 7 {
+			bits |= 1 << v
+		}
+	}
+	return bits
+}
+
+func BitsFromDaysOfMonth(list []int) uint32 {
+	var bits uint32
+	for _, v := range list {
+		if v >= 1 && v <= 31 { // day 1 = bit 0
+			bits |= 1 << (v - 1)
+		}
 	}
 	return bits
 }

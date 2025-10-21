@@ -9,15 +9,18 @@ import (
 )
 
 type Scheduler struct {
-	oneTimeJobs        map[int64][]*OneTimeJob
-	cronJobs           []*CronJob
-	mu                 sync.Mutex
-	wg                 sync.WaitGroup
-	cancel             context.CancelFunc
-	OnAddOneTimeJob    func(job *OneTimeJob)
-	OnAddCronJob       func(job *CronJob)
-	OnDeleteOneTimeJob func(job *OneTimeJob)
-	OnDeleteCronJob    func(job *CronJob)
+	oneTimeJobs map[int64][]*OneTimeJob
+	cronJobs    []*CronJob
+	mu          sync.Mutex
+	wg          sync.WaitGroup
+	cancel      context.CancelFunc
+	// Default Callbacks
+	OnOneTimeJobAdded    func(job *OneTimeJob)
+	OnCronJobAdded       func(job *CronJob)
+	OnOneTimeJobFinished func(job *OneTimeJob, err error)
+	OnCronJobFinished    func(job *CronJob, err error)
+	OnOneTimeJobDeleted  func(job *OneTimeJob)
+	OnCronJobDeleted     func(job *CronJob)
 }
 
 func NewScheduler() *Scheduler {
@@ -70,8 +73,29 @@ func (s *Scheduler) runOneTimeJobs(now time.Time) {
 	delete(s.oneTimeJobs, key)
 	s.mu.Unlock()
 	for _, job := range jobs {
-		s.runAsync(job.Task, job.OnFinish)
+		s.runOneTimeJob(job)
 	}
+}
+
+func (s *Scheduler) runOneTimeJob(job *OneTimeJob) {
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		err := job.Task()
+		if job.OnFinished != nil {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Println("[PANIC] Recovered in job.OnFinished:", r)
+					}
+				}()
+				job.OnFinished(err)
+			}()
+		}
+		if s.OnOneTimeJobFinished != nil {
+			s.OnOneTimeJobFinished(job, err)
+		}
+	}()
 }
 
 func (s *Scheduler) runCronJobs(now time.Time) {
@@ -80,18 +104,21 @@ func (s *Scheduler) runCronJobs(now time.Time) {
 	s.mu.Unlock()
 	for _, job := range jobs {
 		if job.Matches(now) {
-			s.runAsync(job.Task, job.OnFinish)
+			s.runCronJob(job)
 		}
 	}
 }
 
-func (s *Scheduler) runAsync(task func() error, finish func(error)) {
+func (s *Scheduler) runCronJob(job *CronJob) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		err := task()
-		if finish != nil {
-			finish(err)
+		err := job.Task()
+		if job.OnFinished != nil {
+			job.OnFinished(err)
+		}
+		if s.OnCronJobFinished != nil {
+			s.OnCronJobFinished(job, err)
 		}
 	}()
 }
@@ -117,8 +144,18 @@ func (s *Scheduler) AddOneTimeJob(job *OneTimeJob) error {
 	}
 	s.oneTimeJobs[key] = append(s.oneTimeJobs[key], job) // to make this safer?
 	s.mu.Unlock()
-	if s.OnAddOneTimeJob != nil {
-		s.OnAddOneTimeJob(job)
+	if job.OnAdded != nil { // Job-specific callback
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("[PANIC] Recovered in job.OnAdded:", r)
+				}
+			}()
+			job.OnAdded()
+		}()
+	}
+	if s.OnOneTimeJobAdded != nil { // Scheduler-level default callback
+		s.OnOneTimeJobAdded(job)
 	}
 	return nil
 }
@@ -127,8 +164,18 @@ func (s *Scheduler) AddCronJob(job *CronJob) {
 	s.mu.Lock()
 	s.cronJobs = append(s.cronJobs, job)
 	s.mu.Unlock()
-	if s.OnAddCronJob != nil {
-		s.OnAddCronJob(job)
+	if job.OnAdded != nil { // Job-specific callback
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("[PANIC] Recovered in job.OnAdded:", r)
+				}
+			}()
+			job.OnAdded()
+		}()
+	}
+	if s.OnCronJobAdded != nil { // Scheduler-level default callback
+		s.OnCronJobAdded(job)
 	}
 }
 
@@ -161,8 +208,8 @@ func (s *Scheduler) DeleteOneTimeJob(jobID string) {
 		filtered := jobs[:0]
 		for _, job := range jobs {
 			if job.ID == jobID {
-				if s.OnDeleteOneTimeJob != nil {
-					s.OnDeleteOneTimeJob(job)
+				if s.OnOneTimeJobDeleted != nil {
+					s.OnOneTimeJobDeleted(job)
 				}
 			} else {
 				filtered = append(filtered, job)
@@ -184,9 +231,9 @@ func (s *Scheduler) DeleteCronJob(jobID string) {
 	for _, job := range s.cronJobs {
 		if job.ID != jobID {
 			newJobs = append(newJobs, job)
-		} else if s.OnDeleteCronJob != nil {
+		} else if s.OnCronJobDeleted != nil {
 			// trigger global delete callback
-			s.OnDeleteCronJob(job)
+			s.OnCronJobDeleted(job)
 		}
 	}
 	s.cronJobs = newJobs

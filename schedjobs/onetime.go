@@ -6,5 +6,7 @@ type OneTimeJob struct {
 	ID       string
 	ExecTime time.Time
 	Task     func() error
-	OnFinish func(error)
+	// Job-specific callbacks
+	OnAdded    func()
+	OnFinished func(error)
 }
