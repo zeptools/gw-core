@@ -10,10 +10,11 @@ import (
 
 type Scheduler struct {
 	oneTimeJobs map[int64][]*OneTimeJob
-	cronJobs    []*CronJob
-	mu          sync.Mutex
-	wg          sync.WaitGroup
-	cancel      context.CancelFunc
+	//cronJobs    []*CronJob
+	cronJobs map[string]*CronJob
+	mu       sync.Mutex
+	wg       sync.WaitGroup
+	cancel   context.CancelFunc
 	// Default Callbacks
 	OnOneTimeJobAdded    func(job *OneTimeJob)
 	OnCronJobAdded       func(job *CronJob)
@@ -26,7 +27,7 @@ type Scheduler struct {
 func NewScheduler() *Scheduler {
 	return &Scheduler{
 		oneTimeJobs: make(map[int64][]*OneTimeJob),
-		cronJobs:    []*CronJob{},
+		cronJobs:    make(map[string]*CronJob),
 	}
 }
 
@@ -100,7 +101,11 @@ func (s *Scheduler) runOneTimeJob(job *OneTimeJob) {
 
 func (s *Scheduler) runCronJobs(now time.Time) {
 	s.mu.Lock()
-	jobs := append([]*CronJob(nil), s.cronJobs...) // copy jobs so unlocking early is possible
+	// Copy values to a slice so we can unlock early
+	jobs := make([]*CronJob, 0, len(s.cronJobs))
+	for _, job := range s.cronJobs {
+		jobs = append(jobs, job)
+	}
 	s.mu.Unlock()
 	for _, job := range jobs {
 		if job.Matches(now) {
@@ -121,6 +126,30 @@ func (s *Scheduler) runCronJob(job *CronJob) {
 			s.OnCronJobFinished(job, err)
 		}
 	}()
+}
+
+// GetOneTimeJobs returns a copy of all pending one-time jobs, keyed by their scheduled minute-level timestamp.
+func (s *Scheduler) GetOneTimeJobs() map[int64][]*OneTimeJob {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result := make(map[int64][]*OneTimeJob, len(s.oneTimeJobs))
+	for key, jobs := range s.oneTimeJobs {
+		result[key] = append([]*OneTimeJob(nil), jobs...) // copy slice to avoid external mutation
+	}
+	return result
+}
+
+// GetCronJobs returns a copy of all registered cron jobs, keyed by their ID.
+func (s *Scheduler) GetCronJobs() map[string]*CronJob {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result := make(map[string]*CronJob, len(s.cronJobs))
+	for id, job := range s.cronJobs {
+		result[id] = job // shallow copy of the pointer; job itself is shared
+	}
+	return result
 }
 
 func (s *Scheduler) AddOneTimeJob(job *OneTimeJob) error {
@@ -160,10 +189,16 @@ func (s *Scheduler) AddOneTimeJob(job *OneTimeJob) error {
 	return nil
 }
 
-func (s *Scheduler) AddCronJob(job *CronJob) {
+func (s *Scheduler) AddCronJob(job *CronJob) error {
 	s.mu.Lock()
-	s.cronJobs = append(s.cronJobs, job)
 	s.mu.Unlock()
+	if s.cronJobs == nil {
+		s.cronJobs = make(map[string]*CronJob)
+	}
+	if _, exists := s.cronJobs[job.ID]; exists {
+		return fmt.Errorf("cron job with ID %q already exists", job.ID)
+	}
+	s.cronJobs[job.ID] = job
 	if job.OnAdded != nil { // Job-specific callback
 		func() {
 			defer func() {
@@ -177,27 +212,7 @@ func (s *Scheduler) AddCronJob(job *CronJob) {
 	if s.OnCronJobAdded != nil { // Scheduler-level default callback
 		s.OnCronJobAdded(job)
 	}
-}
-
-// GetOneTimeJobs returns a copy of all pending one-time jobs, keyed by their scheduled minute-level timestamp.
-func (s *Scheduler) GetOneTimeJobs() map[int64][]*OneTimeJob {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	result := make(map[int64][]*OneTimeJob, len(s.oneTimeJobs))
-	for key, jobs := range s.oneTimeJobs {
-		result[key] = append([]*OneTimeJob(nil), jobs...) // copy slice to avoid external mutation
-	}
-	return result
-}
-
-// GetCronJobs returns a copy of all registered cron jobs
-func (s *Scheduler) GetCronJobs() []*CronJob {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// Make a shallow copy of the slice to avoid external mutation
-	jobs := append([]*CronJob(nil), s.cronJobs...)
-	return jobs
+	return nil
 }
 
 // DeleteOneTimeJob - Delete a job
@@ -226,15 +241,15 @@ func (s *Scheduler) DeleteOneTimeJob(jobID string) {
 // DeleteCronJob removes a cron job by its ID
 func (s *Scheduler) DeleteCronJob(jobID string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	newJobs := s.cronJobs[:0] // reuse underlying array
-	for _, job := range s.cronJobs {
-		if job.ID != jobID {
-			newJobs = append(newJobs, job)
-		} else if s.OnCronJobDeleted != nil {
-			// trigger global delete callback
-			s.OnCronJobDeleted(job)
-		}
+	job, exists := s.cronJobs[jobID]
+	if !exists {
+		s.mu.Unlock()
+		return
 	}
-	s.cronJobs = newJobs
+	delete(s.cronJobs, jobID)
+	s.mu.Unlock()
+	// trigger global delete callback outside lock
+	if s.OnCronJobDeleted != nil {
+		s.OnCronJobDeleted(job)
+	}
 }
