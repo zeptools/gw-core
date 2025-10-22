@@ -6,8 +6,8 @@ type CronJob struct {
 	ID          string
 	Minutes     uint64 // 60 bits
 	Hours       uint32 // 24 bits
-	Weekdays    uint8  // 7 bits
 	DaysOfMonth uint32 // 31 bits
+	Weekdays    uint8  // 7 bits
 	Task        func() error
 	// Job-specific callbacks
 	OnAdded    func()

@@ -10,11 +10,10 @@ import (
 
 type Scheduler struct {
 	oneTimeJobs map[int64][]*OneTimeJob
-	//cronJobs    []*CronJob
-	cronJobs map[string]*CronJob
-	mu       sync.Mutex
-	wg       sync.WaitGroup
-	cancel   context.CancelFunc
+	cronJobs    map[string]*CronJob
+	mu          sync.Mutex
+	wg          sync.WaitGroup
+	cancel      context.CancelFunc
 	// Default Callbacks
 	OnOneTimeJobAdded    func(job *OneTimeJob)
 	OnCronJobAdded       func(job *CronJob)
