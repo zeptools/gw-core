@@ -2,6 +2,12 @@
 
 package schedjobs
 
+import (
+	"context"
+	"log"
+	"time"
+)
+
 func (s *Scheduler) loop(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
