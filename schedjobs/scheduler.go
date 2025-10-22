@@ -113,7 +113,9 @@ func (s *Scheduler) runCronJobs(now time.Time) {
 	log.Printf("[DEBUG] %d cronjobs copied", len(jobs))
 	s.mu.Unlock()
 	for _, job := range jobs {
+		log.Println("[DEBUG] matching cron job spec for ", job.ID)
 		if job.Matches(now) {
+			log.Println("[DEBUG] cron job spec MATCHED for ", job.ID)
 			s.runCronJob(job)
 		}
 	}
