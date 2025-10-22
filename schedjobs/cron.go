@@ -46,7 +46,7 @@ func (job *CronJob) Matches(now time.Time) bool {
 const (
 	AllMinutes     uint64 = 0xFFFFFFFFFFFFFFF // 60 bits set
 	AllHours       uint32 = 0xFFFFFF          // 24 bits set
-	AllWeekdays    uint8  = 0x7               // 7 bits set
+	AllWeekdays    uint8  = 0b01111111        // sun:0b00000001, mon:0b00000010, ..., fri:0b00100000, sat:0b01000000
 	AllDaysOfMonth uint32 = 0x7FFFFFFF        // 31 bits set
 )
 
