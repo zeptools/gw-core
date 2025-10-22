@@ -190,7 +190,6 @@ func (s *Scheduler) AddOneTimeJob(job *OneTimeJob) error {
 
 func (s *Scheduler) AddCronJob(job *CronJob) error {
 	s.mu.Lock()
-	s.mu.Unlock()
 	if s.cronJobs == nil {
 		s.cronJobs = make(map[string]*CronJob)
 	}
@@ -198,7 +197,9 @@ func (s *Scheduler) AddCronJob(job *CronJob) error {
 		return fmt.Errorf("cron job with ID %q already exists", job.ID)
 	}
 	s.cronJobs[job.ID] = job
-	if job.OnAdded != nil { // Job-specific callback
+	s.mu.Unlock()
+	// Job-specific callback
+	if job.OnAdded != nil {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -208,7 +209,8 @@ func (s *Scheduler) AddCronJob(job *CronJob) error {
 			job.OnAdded()
 		}()
 	}
-	if s.OnCronJobAdded != nil { // Scheduler-level default callback
+	// Scheduler-level default callback
+	if s.OnCronJobAdded != nil {
 		s.OnCronJobAdded(job)
 	}
 	return nil
