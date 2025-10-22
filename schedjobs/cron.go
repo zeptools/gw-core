@@ -17,6 +17,18 @@ type CronJob struct {
 	OnFinished func(error)
 }
 
+// NewEveryMinEmptyCronJob provides a cronjob matching every minute without a task as a template
+// Assign a Task, and Modify its time condition
+func NewEveryMinEmptyCronJob(jobID string) *CronJob {
+	return &CronJob{
+		ID:          jobID,
+		Minutes:     AllMinutes,
+		Hours:       AllHours,
+		DaysOfMonth: AllDaysOfMonth,
+		Weekdays:    AllWeekdays,
+	}
+}
+
 func (job *CronJob) Matches(now time.Time) bool {
 	log.Printf("[DEBUG] Checking match for %s at %v", job.ID, now)
 	log.Printf("[DEBUG] Cron spec: Minutes=%v Hours=%v DaysOfMonth=%v Weekdays=%v",
