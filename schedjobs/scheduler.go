@@ -54,6 +54,7 @@ func (s *Scheduler) loop(ctx context.Context) {
 	defer ticker.Stop()
 	for {
 		now := time.Now()
+		log.Println("[DEBUG] Scheduler loop tick at", now)
 		s.runOneTimeJobs(now)
 		s.runCronJobs(now)
 
