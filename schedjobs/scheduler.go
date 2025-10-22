@@ -72,6 +72,7 @@ func (s *Scheduler) runOneTimeJobs(now time.Time) {
 	s.mu.Lock()
 	jobs := s.oneTimeJobs[key]
 	delete(s.oneTimeJobs, key)
+	log.Println("[DEBUG] runOneTimeJobs with key: ", key)
 	s.mu.Unlock()
 	for _, job := range jobs {
 		s.runOneTimeJob(job)
@@ -79,6 +80,7 @@ func (s *Scheduler) runOneTimeJobs(now time.Time) {
 }
 
 func (s *Scheduler) runOneTimeJob(job *OneTimeJob) {
+	log.Println("[DEBUG] runOneTimeJob called")
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
