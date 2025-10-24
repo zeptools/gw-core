@@ -31,9 +31,9 @@ func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
 			if now.Sub(last) > olderThan {
 				g.buckets.Delete(id)
 				cleanCnt++
-				log.Println("[DEBUG] bucket removed")
+				log.Println("[DEBUG] bucket REMOVED")
 			} else {
-				log.Println("[DEBUG] bucket kept")
+				log.Println("[DEBUG] keeping bucket")
 			}
 			return true // continue iteration
 		})
