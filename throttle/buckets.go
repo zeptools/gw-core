@@ -116,6 +116,7 @@ func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
 //   - period: how often to wake up
 //   - olderThan: how old a bucket must be to be deleted
 func (s *BucketStore[K]) StartCleaningService(period time.Duration, olderThan time.Duration) {
+	log.Println("[INFO] starting BucketStore cleaning service")
 	go func() {
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()
@@ -127,6 +128,7 @@ func (s *BucketStore[K]) StartCleaningService(period time.Duration, olderThan ti
 						log.Printf("[PANIC] recovered in StartCleaningService: %v", r)
 					}
 				}()
+				log.Println("[INFO] BucketStore cleaning cycle ...")
 				s.Cleanup(olderThan, now)
 			}()
 		}
