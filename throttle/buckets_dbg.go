@@ -18,20 +18,22 @@ func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
 			// lock per bucket while checking/removing
 			b.mu.Lock()
 			last := b.lastCheck
-			log.Printf("[DEBUG] inspecting bucket %q lastCheck = %v", id, last)
+			switch typedID := id.(type) {
+			case int64, int:
+				log.Printf("[DEBUG] inspecting bucket id=%d lastCheck=%v", typedID, last)
+			case string:
+				log.Printf("[DEBUG] inspecting bucket id=%q lastCheck=%v", typedID, last)
+			default:
+				log.Printf("[DEBUG] inspecting bucket id=%v lastCheck=%v", typedID, last)
+			}
 			b.mu.Unlock()
 
 			if now.Sub(last) > olderThan {
 				g.buckets.Delete(id)
 				cleanCnt++
-				switch v := id.(type) {
-				case string:
-					log.Printf("[DEBUG] expired bucket %q removed", v)
-				case int64:
-					log.Printf("[DEBUG] expired bucket '%d' removed", v)
-				default:
-					log.Printf("[DEBUG] expired bucket '%v' removed", v)
-				}
+				log.Println("[DEBUG] bucket removed")
+			} else {
+				log.Println("[DEBUG] bucket kept")
 			}
 			return true // continue iteration
 		})
