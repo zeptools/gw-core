@@ -24,7 +24,14 @@ func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
 			if now.Sub(last) > olderThan {
 				g.buckets.Delete(id)
 				cleanCnt++
-				log.Printf("[DEBUG] expired bucket %q removed", id)
+				switch v := id.(type) {
+				case string:
+					log.Printf("[DEBUG] expired bucket %q removed", v)
+				case int64:
+					log.Printf("[DEBUG] expired bucket '%d' removed", v)
+				default:
+					log.Printf("[DEBUG] expired bucket '%v' removed", v)
+				}
 			}
 			return true // continue iteration
 		})
