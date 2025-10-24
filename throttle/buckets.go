@@ -1,6 +1,7 @@
 package throttle
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -108,4 +109,26 @@ func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
 	// consume 1 token from the fresh bucket
 	g.SetBucket(userID, g.conf.Burst-1, now)
 	return true
+}
+
+// StartCleaningService starts a background goroutine that periodically
+// cleans up expired buckets. It runs forever until the process exits.
+//   - period: how often to wake up
+//   - olderThan: how old a bucket must be to be deleted
+func (s *BucketStore[K]) StartCleaningService(period time.Duration, olderThan time.Duration) {
+	go func() {
+		ticker := time.NewTicker(period)
+		defer ticker.Stop()
+
+		for now := range ticker.C {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[PANIC] recovered in StartCleaningService: %v", r)
+					}
+				}()
+				s.Cleanup(olderThan, now)
+			}()
+		}
+	}()
 }
