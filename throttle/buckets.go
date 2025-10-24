@@ -41,7 +41,7 @@ func (b *Bucket[K]) Allow(now time.Time) bool {
 
 type BucketGroup[K comparable] struct {
 	conf    *BucketConf
-	buckets *sync.Map // userID -> *Bucket
+	buckets *sync.Map // K -> *Bucket[K]
 }
 
 func (g *BucketGroup[K]) GetBucket(id K) (*Bucket[K], bool) {
@@ -96,8 +96,8 @@ func (s *BucketStore[K]) SetBucketGroup(id string, conf *BucketConf) {
 	}
 }
 
-func Allow[K comparable](store *BucketStore[K], groupID string, userID K, now time.Time) bool {
-	g, ok := store.GetBucketGroup(groupID)
+func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
+	g, ok := s.GetBucketGroup(groupID)
 	if !ok {
 		return false // Invalid groupID always Blocked
 	}
