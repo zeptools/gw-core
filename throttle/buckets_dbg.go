@@ -24,4 +24,5 @@ func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
 			return true // continue iteration
 		})
 	}
+	log.Printf("[DEBUG] expired buckets cleaned up")
 }
