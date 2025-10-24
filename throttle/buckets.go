@@ -111,12 +111,12 @@ func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
 	return true
 }
 
-// StartCleaningService starts a background goroutine that periodically
+// StartCleanUpService starts a background goroutine that periodically
 // cleans up expired buckets. It runs forever until the process exits.
 //   - period: how often to wake up
 //   - olderThan: how old a bucket must be to be deleted
-func (s *BucketStore[K]) StartCleaningService(period time.Duration, olderThan time.Duration) {
-	log.Println("[INFO] starting BucketStore cleaning service")
+func (s *BucketStore[K]) StartCleanUpService(period time.Duration, olderThan time.Duration) {
+	log.Printf("[INFO][throttle.BucketStore] starting cleanup service period=%v olderthan=%v", period, olderThan)
 	go func() {
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()
@@ -125,10 +125,10 @@ func (s *BucketStore[K]) StartCleaningService(period time.Duration, olderThan ti
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("[PANIC] recovered in StartCleaningService: %v", r)
+						log.Printf("[PANIC] recovered in throttle bucketstore StartCleanUpService: %v", r)
 					}
 				}()
-				log.Println("[INFO] BucketStore cleaning cycle ...")
+				log.Println("[INFO][throttle.BucketStore] cleanup cycle ...")
 				s.Cleanup(olderThan, now)
 			}()
 		}
