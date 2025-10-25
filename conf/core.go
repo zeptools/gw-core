@@ -41,24 +41,13 @@ type Core[SU comparable] struct {
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
-func NewCoreDefault[SU comparable](appRoot string, ctx context.Context) Core[SU] {
-	return Core[SU]{
-		AppRoot:      appRoot,
-		Context:      ctx,
-		VolatileKV:   &sync.Map{},
-		SessionLocks: &sync.Map{},
-		HttpClient:   &http.Client{},
-		ActionLocks:  &sync.Map{},
-	}
-}
-
-func (c *Core[SU]) CleanUp() {
-	log.Println("[INFO] App Resource Cleaning Up...")
-	// Clean up DB clients ----
-	db.CloseClient("KVDBClient", c.KVDBClient)
-	db.CloseClient("MainDBClient", c.MainDBClient)
-	//----
-	log.Println("[INFO] App Resource Cleanup Complete")
+func (c *Core[SU]) PrepareBase(appRoot string, ctx context.Context) {
+	c.AppRoot = appRoot
+	c.Context = ctx
+	c.VolatileKV = &sync.Map{}
+	c.SessionLocks = &sync.Map{}
+	c.HttpClient = &http.Client{}
+	c.ActionLocks = &sync.Map{}
 }
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
@@ -95,6 +84,15 @@ func (c *Core[SU]) LoadStorageConf() error {
 		return err
 	}
 	return nil
+}
+
+func (c *Core[SU]) CleanUp() {
+	log.Println("[INFO] App Resource Cleaning Up...")
+	// Clean up DB clients ----
+	db.CloseClient("KVDBClient", c.KVDBClient)
+	db.CloseClient("MainDBClient", c.MainDBClient)
+	//----
+	log.Println("[INFO] App Resource Cleanup Complete")
 }
 
 type CommonDBConf struct {
