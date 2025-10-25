@@ -41,9 +41,23 @@ type Core[SU comparable] struct {
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
-func (c *Core[SU]) PrepareBase(appRoot string, ctx context.Context) {
+func (c *Core[SU]) InitLoadEnvFile(appRoot string, ctx context.Context) error {
 	c.AppRoot = appRoot
 	c.Context = ctx
+	// Load .env.json
+	envFilePath := filepath.Join(c.AppRoot, "config", ".env.json")
+	//file, readErr := os.Open(envFilePath) // (*os.File, error)
+	envBytes, err := os.ReadFile(envFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(envBytes, c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[SU]) PrepareBase() {
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
