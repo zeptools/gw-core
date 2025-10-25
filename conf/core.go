@@ -45,6 +45,10 @@ func (c *Core[SU]) CleanUp() {
 	log.Println("[INFO] App Resource Cleanup Complete")
 }
 
+func (c *Core[SU]) NewThrottleBucketStore() *throttle.BucketStore[SU] {
+	return throttle.NewBucketStore[SU]()
+}
+
 type CommonDBConf struct {
 	KV   kvdb.Conf  `json:"kv"`
 	Main sqldb.Conf `json:"main"`
