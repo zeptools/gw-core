@@ -41,6 +41,17 @@ type Core[SU comparable] struct {
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
+func NewCoreDefault[SU comparable](appRoot string, ctx context.Context) Core[SU] {
+	return Core[SU]{
+		AppRoot:      appRoot,
+		Context:      ctx,
+		VolatileKV:   &sync.Map{},
+		SessionLocks: &sync.Map{},
+		HttpClient:   &http.Client{},
+		ActionLocks:  &sync.Map{},
+	}
+}
+
 func (c *Core[SU]) CleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
