@@ -30,6 +30,30 @@ func NewScheduler() *Scheduler {
 	}
 }
 
+// SetDefaultLoggers provides optional default loggers
+func (s *Scheduler) SetDefaultLoggers() {
+	s.OnOneTimeJobAdded = func(job *OneTimeJob) {
+		log.Printf("[INFO] One-time job added: %s for %v", job.ID, job.ExecTime)
+	}
+	s.OnCronJobAdded = func(job *CronJob) {
+		log.Printf("[INFO] cron job added: %s", job.ID)
+	}
+	s.OnCronJobFinished = func(job *CronJob, err error) {
+		if err == nil {
+			log.Printf("[INFO] cron job finished: %s", job.ID)
+		} else {
+			log.Printf("[INFO] cron job finished: %s with error: %v", job.ID, err)
+		}
+	}
+	s.OnOneTimeJobFinished = func(job *OneTimeJob, err error) {
+		if err == nil {
+			log.Printf("[INFO] one-time job finished: %s", job.ID)
+		} else {
+			log.Printf("[INFO] one-time job finished: %s with error: %v", job.ID, err)
+		}
+	}
+}
+
 func (s *Scheduler) Start() {
 	if s.cancel != nil {
 		return // already started
