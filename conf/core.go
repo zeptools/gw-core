@@ -43,12 +43,12 @@ type Core[SU comparable] struct {
 
 // BaseInit - 1st step for initialization
 // 1. set AppRoot
-// 2. load .env.json file
+// 2. load config/.core.json file
 // 3. prepare base fields
 func (c *Core[SU]) BaseInit(appRoot string) error {
 	c.AppRoot = appRoot
 	// Load .env.json
-	envFilePath := filepath.Join(c.AppRoot, "config", ".env.json")
+	envFilePath := filepath.Join(c.AppRoot, "config", ".core.json")
 	//file, readErr := os.Open(envFilePath) // (*os.File, error)
 	envBytes, err := os.ReadFile(envFilePath) // ([]byte, error)
 	if err != nil {
