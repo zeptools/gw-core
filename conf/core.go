@@ -41,8 +41,11 @@ type Core[SU comparable] struct {
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
-// InitFromEnvFile - 1st step for initialization: set AppRoot and load .env.json file
-func (c *Core[SU]) InitFromEnvFile(appRoot string) error {
+// BaseInit - 1st step for initialization
+// 1. set AppRoot
+// 2. load .env.json file
+// 3. prepare base fields
+func (c *Core[SU]) BaseInit(appRoot string) error {
 	c.AppRoot = appRoot
 	// Load .env.json
 	envFilePath := filepath.Join(c.AppRoot, "config", ".env.json")
@@ -54,15 +57,13 @@ func (c *Core[SU]) InitFromEnvFile(appRoot string) error {
 	if err = json.Unmarshal(envBytes, c); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (c *Core[SU]) PrepareBase() {
+	// Set Base Fields
 	c.Context = context.Background()
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
+	return nil
 }
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
