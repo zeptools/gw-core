@@ -14,8 +14,8 @@ import (
 )
 
 // Core - common config
-// U = UserID Type e.g. string, int64, etc
-type Core[U comparable] struct {
+// SU = Type for Session User _ e.g. string, int64, etc
+type Core[SU comparable] struct {
 	AppName             string                     `json:"app_name"`
 	AppRoot             string                     `json:"-"` // filled from compiled paths
 	Listen              string                     `json:"listen"`
@@ -31,11 +31,11 @@ type Core[U comparable] struct {
 	HttpClient          *http.Client               `json:"-"`
 	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[U]   `json:"-"`
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`
 	DebugOpts           DebugOpts                  `json:"debug_opts"` // Do not promote
 }
 
-func (c *Core[U]) CleanUp() {
+func (c *Core[SU]) CleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 
 	// clean up DB clients
