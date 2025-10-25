@@ -26,18 +26,18 @@ type Core[SU comparable] struct {
 	Host                string                     `json:"host"` // can be used to generate public url endpoints
 	Context             context.Context            `json:"-"`    // Shared Context
 	VolatileKV          *sync.Map                  `json:"-"`
-	DBConf              CommonDBConf               `json:"-"` // Init manually. e.g. for separate file
+	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
 	KVDBClient          kvdb.Client                `json:"-"`
 	MainDBClient        sqldb.Client               `json:"-"`
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
 	MainDBPlaceholder   func(...int) string        `json:"-"`
 	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
-	StorageConf         storages.Conf              `json:"-"` // Init manually. e.g. for separate file
-	HttpClient          *http.Client               `json:"-"`
+	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
 	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
-	JobScheduler        *schedjobs.Scheduler       `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`
-	DebugOpts           DebugOpts                  `json:"debug_opts"` // Do not promote
+	JobScheduler        *schedjobs.Scheduler       `json:"-"` // PrepareJobScheduler()
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
+	HttpClient          *http.Client               `json:"-"`
+	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
 func (c *Core[SU]) CleanUp() {
@@ -56,6 +56,10 @@ func (c *Core[SU]) PrepareThrottleBucketStore() {
 
 func (c *Core[SU]) PrepareJobScheduler() {
 	c.JobScheduler = schedjobs.NewScheduler()
+}
+
+func (c *Core[SU]) PrepareMainDBRawStore() {
+	c.MainDBRawStore = sqldb.NewRawStore()
 }
 
 func (c *Core[SU]) LoadDBConf() error {
