@@ -29,7 +29,7 @@ type Core[SU comparable] struct {
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
 	MainDBPlaceholder   func(...int) string        `json:"-"`
 	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
-	StorageConf         storages.Conf              `json:"storages"`
+	StorageConf         storages.Conf              `json:"-"` // Init manually. e.g. for separate file
 	HttpClient          *http.Client               `json:"-"`
 	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`
