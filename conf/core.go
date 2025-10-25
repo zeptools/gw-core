@@ -41,9 +41,9 @@ type Core[SU comparable] struct {
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
-func (c *Core[SU]) InitLoadEnvFile(appRoot string, ctx context.Context) error {
+// InitFromEnvFile - 1st step for initialization: set AppRoot and load .env.json file
+func (c *Core[SU]) InitFromEnvFile(appRoot string) error {
 	c.AppRoot = appRoot
-	c.Context = ctx
 	// Load .env.json
 	envFilePath := filepath.Join(c.AppRoot, "config", ".env.json")
 	//file, readErr := os.Open(envFilePath) // (*os.File, error)
@@ -58,6 +58,7 @@ func (c *Core[SU]) InitLoadEnvFile(appRoot string, ctx context.Context) error {
 }
 
 func (c *Core[SU]) PrepareBase() {
+	c.Context = context.Background()
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
