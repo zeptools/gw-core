@@ -30,8 +30,8 @@ func NewScheduler() *Scheduler {
 	}
 }
 
-// SetDefaultLoggers provides optional default loggers
-func (s *Scheduler) SetDefaultLoggers() {
+// UseDefaultLoggers set scheduer-level loggers with default ones
+func (s *Scheduler) UseDefaultLoggers() {
 	s.OnOneTimeJobAdded = func(job *OneTimeJob) {
 		log.Printf("[INFO] One-time job added: %s for %v", job.ID, job.ExecTime)
 	}
