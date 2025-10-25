@@ -8,7 +8,7 @@ import (
 )
 
 func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
-	log.Printf("[DEBUG][Throttle] cleaning expired Buckets older than %v at %v", olderThan, now)
+	log.Printf("[DEBUG][Throttle] cleaning Buckets older than %v", olderThan)
 	cleanCnt := 0
 	for gid, g := range s.groups {
 		log.Printf("[DEBUG][Throttle] cleaning BucketGroup %q", gid)
