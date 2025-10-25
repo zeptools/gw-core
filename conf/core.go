@@ -21,32 +21,32 @@ import (
 // SU = Type for Session User _ e.g. string, int64, etc
 type Core[SU comparable] struct {
 	AppName             string                     `json:"app_name"`
-	AppRoot             string                     `json:"-"` // filled from compiled paths
 	Listen              string                     `json:"listen"`
-	Host                string                     `json:"host"` // can be used to generate public url endpoints
+	AppRoot             string                     `json:"-"`    // Filled from compiled paths
+	Host                string                     `json:"host"` // Can be used to generate public url endpoints
 	Context             context.Context            `json:"-"`    // Shared Context
-	VolatileKV          *sync.Map                  `json:"-"`
-	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
+	JobScheduler        *schedjobs.Scheduler       `json:"-"`    // PrepareJobScheduler()
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`    // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                  `json:"-"`    // map[string]string
+	SessionLocks        *sync.Map                  `json:"-"`    // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                  `json:"-"`    // map[string]struct{}
+	StorageConf         storages.Conf              `json:"-"`    // LoadStorageConf()
+	DBConf              CommonDBConf               `json:"-"`    // LoadDBConf()
 	KVDBClient          kvdb.Client                `json:"-"`
 	MainDBClient        sqldb.Client               `json:"-"`
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
 	MainDBPlaceholder   func(...int) string        `json:"-"`
 	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
-	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
-	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
-	JobScheduler        *schedjobs.Scheduler       `json:"-"` // PrepareJobScheduler()
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
 	HttpClient          *http.Client               `json:"-"`
 	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
 func (c *Core[SU]) CleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
-
-	// clean up DB clients
+	// Clean up DB clients ----
 	db.CloseClient("KVDBClient", c.KVDBClient)
 	db.CloseClient("MainDBClient", c.MainDBClient)
-
+	//----
 	log.Println("[INFO] App Resource Cleanup Complete")
 }
 
