@@ -128,7 +128,7 @@ func (s *BucketStore[K]) StartCleanUpService(period time.Duration, olderThan tim
 						log.Printf("[PANIC] recovered in throttle bucketstore StartCleanUpService: %v", r)
 					}
 				}()
-				log.Printf("[INFO][Throttle] every %v cleanup cycle ...", period)
+				log.Printf("[INFO][Throttle] %v cleanup cycle ...", period)
 				s.Cleanup(olderThan, now)
 			}()
 		}
