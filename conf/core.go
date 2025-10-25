@@ -24,7 +24,7 @@ type Core[SU comparable] struct {
 	AppRoot             string                     `json:"-"` // filled from compiled paths
 	Listen              string                     `json:"listen"`
 	Host                string                     `json:"host"` // can be used to generate public url endpoints
-	Context             context.Context            `json:"-"`
+	Context             context.Context            `json:"-"`    // Shared Context
 	VolatileKV          *sync.Map                  `json:"-"`
 	DBConf              CommonDBConf               `json:"-"` // Init manually. e.g. for separate file
 	KVDBClient          kvdb.Client                `json:"-"`
@@ -52,6 +52,10 @@ func (c *Core[SU]) CleanUp() {
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
 	c.ThrottleBucketStore = throttle.NewBucketStore[SU]()
+}
+
+func (c *Core[SU]) PrepareJobScheduler() {
+	c.JobScheduler = schedjobs.NewScheduler()
 }
 
 func (c *Core[SU]) LoadDBConf() error {

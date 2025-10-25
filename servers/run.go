@@ -22,7 +22,7 @@ func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func()
 
 	// Start the server in a goroutine
 	go func() {
-		log.Printf("[INFO] %s listening on %s ...", appName, server.Addr)
+		log.Printf("[INFO] %q listening on %s ...", appName, server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrChan <- err
 		} else {
@@ -57,6 +57,6 @@ func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func()
 		return err
 	}
 
-	log.Printf("[INFO] shutdown for the app [%s] complete", appName)
+	log.Printf("[INFO] %q shutdown complete", appName)
 	return nil
 }
