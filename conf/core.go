@@ -2,8 +2,11 @@ package conf
 
 import (
 	"context"
+	"encoding/json/v2"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/zeptools/gw-core/db"
@@ -49,6 +52,30 @@ func (c *Core[SU]) CleanUp() {
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
 	c.ThrottleBucketStore = throttle.NewBucketStore[SU]()
+}
+
+func (c *Core[SU]) LoadDBConf() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".databases.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.DBConf); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[SU]) LoadStorageConf() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".storages.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.StorageConf); err != nil {
+		return err
+	}
+	return nil
 }
 
 type CommonDBConf struct {
