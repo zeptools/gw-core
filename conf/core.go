@@ -24,7 +24,8 @@ type Core[SU comparable] struct {
 	Listen              string                     `json:"listen"`
 	AppRoot             string                     `json:"-"`    // Filled from compiled paths
 	Host                string                     `json:"host"` // Can be used to generate public url endpoints
-	Context             context.Context            `json:"-"`    // Shared Context
+	Ctx                 context.Context            `json:"-"`    // Global Context
+	Cancel              context.CancelFunc         `json:"-"`    // CancelFunc for Ctx
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`    // PrepareJobScheduler()
 	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`    // PrepareThrottleBucketStore()
 	VolatileKV          *sync.Map                  `json:"-"`    // map[string]string
@@ -45,7 +46,7 @@ type Core[SU comparable] struct {
 // 1. set AppRoot
 // 2. load config/.core.json file
 // 3. prepare base fields
-func (c *Core[SU]) BaseInit(appRoot string) error {
+func (c *Core[SU]) BaseInit(appRoot string, ctx context.Context, cancel context.CancelFunc) error {
 	c.AppRoot = appRoot
 	// Load .env.json
 	envFilePath := filepath.Join(c.AppRoot, "config", ".core.json")
@@ -58,7 +59,8 @@ func (c *Core[SU]) BaseInit(appRoot string) error {
 		return err
 	}
 	// Set Base Fields
-	c.Context = context.Background()
+	c.Ctx = ctx
+	c.Cancel = cancel
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
