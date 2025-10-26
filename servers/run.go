@@ -22,7 +22,7 @@ func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func()
 
 	// Start the server in a goroutine
 	go func() {
-		log.Printf("[INFO] %q listening on %s ...", appName, server.Addr)
+		log.Printf("[INFO][TCP] %q listening on %s ...", appName, server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrChan <- err
 		} else {
