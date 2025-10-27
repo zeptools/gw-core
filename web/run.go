@@ -14,13 +14,13 @@ import (
 // RunWithGracefulShutdown starts the server and handles SIGINT/SIGTERM gracefully.
 // - server: the http.Server to run
 // - appName: for logging
-// - cleanup: optional cleanup function to release resources
+// - cleanup: optional cleanup function to release resources // ToDo: take this out as a core system shutdown process
 // - timeout: max duration for shutdown
 func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func(), timeout time.Duration) error {
 	// Channel to capture server errors
 	serverErrChan := make(chan error, 1) // error channel
 
-	// StartService the server in a goroutine
+	// Start the server in a goroutine
 	go func() {
 		log.Printf("[INFO][TCP] %q listening on %s ...", appName, server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -38,7 +38,7 @@ func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func()
 	sig := <-osSignalChan
 	log.Printf("[INFO] got signal [%s]. shutting down the app [%s] ...", sig, appName)
 
-	// Run cleanup if provided
+	// run cleanup if provided
 	if cleanup != nil {
 		cleanup()
 	}

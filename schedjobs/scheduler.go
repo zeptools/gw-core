@@ -4,16 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
-	"github.com/zeptools/gw-core/service"
+	"github.com/zeptools/gw-core/svc"
 )
 
 type Scheduler struct {
 	Ctx         context.Context    // Service Context
-	Cancel      context.CancelFunc // Service Context CancelFunc
+	cancel      context.CancelFunc // Service Context CancelFunc
 	state       int                // internal service state
+	done        chan error         // Shutdown Error Channel
 	oneTimeJobs map[int64][]*OneTimeJob
 	cronJobs    map[string]*CronJob
 	mu          sync.Mutex
@@ -31,8 +33,9 @@ func NewScheduler(parentCtx context.Context) *Scheduler {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Scheduler{
 		Ctx:         svcCtx,
-		Cancel:      svcCancel,
-		state:       service.StateREADY,
+		cancel:      svcCancel,
+		state:       svc.StateREADY,
+		done:        make(chan error, 1),
 		oneTimeJobs: make(map[int64][]*OneTimeJob),
 		cronJobs:    make(map[string]*CronJob),
 	}
@@ -62,28 +65,55 @@ func (s *Scheduler) UseDefaultLoggers() {
 	}
 }
 
-func (s *Scheduler) StartService() {
-	if s.state == service.StateRUNNING {
-		log.Println("[ERROR][JobScheduler] already started")
-		return
+func (s *Scheduler) Start() error {
+	if s.state == svc.StateRUNNING {
+		return fmt.Errorf("already started")
 	}
-	if s.state != service.StateREADY {
-		log.Println("[ERROR][JobScheduler] cannot start. not ready")
-		return
+	if s.state != svc.StateREADY {
+		return fmt.Errorf("cannot start. not ready")
 	}
-	s.state = service.StateRUNNING
+	s.state = svc.StateRUNNING
 	log.Println("[INFO][JobScheduler] service started")
-	go s.loop(s.Ctx)
+	go s.run()
+	return nil
 }
 
 func (s *Scheduler) Stop() {
-	if s.state != service.StateRUNNING {
+	if s.state != svc.StateRUNNING {
 		log.Println("[ERROR][JobScheduler] cannot stop. not running")
 		return
 	}
-	s.Cancel()
-	s.wg.Wait() // wait for running tasks
-	log.Println("[INFO] job scheduler stopped")
+	s.cancel()
+	s.state = svc.StateSTOPPED
+	log.Println("[INFO][JobScheduler] service stopped")
+}
+
+func (s *Scheduler) Done() <-chan error {
+	return s.done
+}
+
+func (s *Scheduler) run() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.Ctx.Done():
+			log.Println("[INFO][Scheduler] shutting down...")
+			s.wg.Wait()   // wait for all worker goroutines
+			s.done <- nil // clean shutdown
+			return
+		case now := <-ticker.C:
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[PANIC][Scheduler] panic recovered: %v\n%s", r, debug.Stack())
+					}
+				}()
+				s.runOneTimeJobs(now)
+				s.runCronJobs(now)
+			}()
+		}
+	}
 }
 
 // GetOneTimeJobs returns a copy of all pending one-time jobs, keyed by their scheduled minute-level timestamp.

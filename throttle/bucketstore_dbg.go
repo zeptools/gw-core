@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
-	log.Printf("[DEBUG][Throttle] cleaning Buckets older than %v", olderThan)
+func (s *BucketStore[K]) Cleanup(now time.Time) {
+	log.Printf("[DEBUG][Throttle] cleaning Buckets older than %v", s.cleanupOlderThan)
 	cleanCnt := 0
 	for gid, g := range s.groups {
 		log.Printf("[DEBUG][Throttle] cleaning BucketGroup %q", gid)
@@ -28,7 +28,7 @@ func (s *BucketStore[K]) Cleanup(olderThan time.Duration, now time.Time) {
 			}
 			b.mu.Unlock()
 
-			if now.Sub(last) > olderThan {
+			if now.Sub(last) > s.cleanupOlderThan {
 				g.buckets.Delete(id)
 				cleanCnt++
 				log.Println("[DEBUG][Throttle] Bucket REMOVED")
