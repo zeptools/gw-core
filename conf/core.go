@@ -24,8 +24,8 @@ type Core[SU comparable] struct {
 	Listen              string                     `json:"listen"`
 	AppRoot             string                     `json:"-"`    // Filled from compiled paths
 	Host                string                     `json:"host"` // Can be used to generate public url endpoints
-	Ctx                 context.Context            `json:"-"`    // Global Context
-	Cancel              context.CancelFunc         `json:"-"`    // CancelFunc for Ctx
+	RootCtx             context.Context            `json:"-"`    // Global Context with RootCancel
+	RootCancel          context.CancelFunc         `json:"-"`    // CancelFunc for RootCtx
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`    // PrepareJobScheduler()
 	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`    // PrepareThrottleBucketStore()
 	VolatileKV          *sync.Map                  `json:"-"`    // map[string]string
@@ -59,8 +59,8 @@ func (c *Core[SU]) BaseInit(appRoot string, ctx context.Context, cancel context.
 		return err
 	}
 	// Set Base Fields
-	c.Ctx = ctx
-	c.Cancel = cancel
+	c.RootCtx = ctx
+	c.RootCancel = cancel
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
