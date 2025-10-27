@@ -46,7 +46,7 @@ type Core[SU comparable] struct {
 // 1. set AppRoot
 // 2. load config/.core.json file
 // 3. prepare base fields
-func (c *Core[SU]) BaseInit(appRoot string, ctx context.Context, cancel context.CancelFunc) error {
+func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
 	c.AppRoot = appRoot
 	// Load .env.json
 	envFilePath := filepath.Join(c.AppRoot, "config", ".core.json")
@@ -59,8 +59,8 @@ func (c *Core[SU]) BaseInit(appRoot string, ctx context.Context, cancel context.
 		return err
 	}
 	// Set Base Fields
-	c.RootCtx = ctx
-	c.RootCancel = cancel
+	c.RootCtx = rootCtx
+	c.RootCancel = rootCancel
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
