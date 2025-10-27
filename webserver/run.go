@@ -1,4 +1,4 @@
-package servers
+package webserver
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func()
 	// Channel to capture server errors
 	serverErrChan := make(chan error, 1) // error channel
 
-	// Start the server in a goroutine
+	// StartService the server in a goroutine
 	go func() {
 		log.Printf("[INFO][TCP] %q listening on %s ...", appName, server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

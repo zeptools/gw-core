@@ -75,11 +75,11 @@ func (c *Core[SU]) PrepareUnixSocket() {
 }
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
-	c.ThrottleBucketStore = throttle.NewBucketStore[SU]()
+	c.ThrottleBucketStore = throttle.NewBucketStore[SU](c.RootCtx)
 }
 
 func (c *Core[SU]) PrepareJobScheduler() {
-	c.JobScheduler = schedjobs.NewScheduler()
+	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
 }
 
 func (c *Core[SU]) PrepareMainDBRawStore() {

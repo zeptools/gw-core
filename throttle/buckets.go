@@ -1,9 +1,12 @@
 package throttle
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/zeptools/gw-core/service"
 )
 
 type Bucket[K comparable] struct {
@@ -40,6 +43,12 @@ func (b *Bucket[K]) Allow(now time.Time) bool {
 	return true
 }
 
+type BucketConf struct {
+	Burst     int           // maximum number of tokens in the bucket
+	Increment int           // how many tokens to add each period
+	Period    time.Duration // how often to add Increment
+}
+
 type BucketGroup[K comparable] struct {
 	conf    *BucketConf
 	buckets *sync.Map // K -> *Bucket[K]
@@ -61,18 +70,19 @@ func (g *BucketGroup[K]) SetBucket(id K, tokens int, now time.Time) {
 	})
 }
 
-type BucketConf struct {
-	Burst     int           // maximum number of tokens in the bucket
-	Increment int           // how many tokens to add each period
-	Period    time.Duration // how often to add Increment
-}
-
 type BucketStore[K comparable] struct {
+	Ctx    context.Context    // Service Context
+	Cancel context.CancelFunc // Service Context CancelFunc
+	state  int                // internal service state
 	groups map[string]*BucketGroup[K]
 }
 
-func NewBucketStore[K comparable]() *BucketStore[K] {
+func NewBucketStore[K comparable](parentCtx context.Context) *BucketStore[K] {
+	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &BucketStore[K]{
+		Ctx:    svcCtx,
+		Cancel: svcCancel,
+		state:  service.StateREADY,
 		groups: make(map[string]*BucketGroup[K]),
 	}
 }
@@ -116,7 +126,16 @@ func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
 //   - period: how often to wake up
 //   - olderThan: how old a bucket must be to be deleted
 func (s *BucketStore[K]) StartCleanUpService(period time.Duration, olderThan time.Duration) {
-	log.Printf("[INFO][Throttle] starting cleanup service period=%v olderThan=%v", period, olderThan)
+	if s.state == service.StateRUNNING {
+		log.Println("[ERROR][Throttle] already started")
+		return
+	}
+	if s.state != service.StateREADY {
+		log.Println("[ERROR][Throttle] cannot start. not ready")
+		return
+	}
+	s.state = service.StateRUNNING
+	log.Printf("[INFO][Throttle] cleanup service started cycle=%v exp=%v", period, olderThan)
 	go func() {
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()

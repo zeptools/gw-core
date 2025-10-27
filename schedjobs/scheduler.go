@@ -6,14 +6,18 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/zeptools/gw-core/service"
 )
 
 type Scheduler struct {
+	Ctx         context.Context    // Service Context
+	Cancel      context.CancelFunc // Service Context CancelFunc
+	state       int                // internal service state
 	oneTimeJobs map[int64][]*OneTimeJob
 	cronJobs    map[string]*CronJob
 	mu          sync.Mutex
 	wg          sync.WaitGroup
-	cancel      context.CancelFunc
 	// Default Callbacks
 	OnOneTimeJobAdded    func(job *OneTimeJob)
 	OnCronJobAdded       func(job *CronJob)
@@ -23,8 +27,12 @@ type Scheduler struct {
 	OnCronJobDeleted     func(job *CronJob)
 }
 
-func NewScheduler() *Scheduler {
+func NewScheduler(parentCtx context.Context) *Scheduler {
+	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Scheduler{
+		Ctx:         svcCtx,
+		Cancel:      svcCancel,
+		state:       service.StateREADY,
 		oneTimeJobs: make(map[int64][]*OneTimeJob),
 		cronJobs:    make(map[string]*CronJob),
 	}
@@ -54,21 +62,26 @@ func (s *Scheduler) UseDefaultLoggers() {
 	}
 }
 
-func (s *Scheduler) Start() {
-	if s.cancel != nil {
-		return // already started
+func (s *Scheduler) StartService() {
+	if s.state == service.StateRUNNING {
+		log.Println("[ERROR][JobScheduler] already started")
+		return
 	}
-	// new derived context `ctx` from the parent `context.Background()`
-	ctx, cancel := context.WithCancel(context.Background()) // With cancel(), it notifies all goroutines waiting on ctx.Done()
-	s.cancel = cancel
-	go s.loop(ctx)
-	log.Println("[INFO] job scheduler started")
+	if s.state != service.StateREADY {
+		log.Println("[ERROR][JobScheduler] cannot start. not ready")
+		return
+	}
+	s.state = service.StateRUNNING
+	log.Println("[INFO][JobScheduler] service started")
+	go s.loop(s.Ctx)
 }
 
 func (s *Scheduler) Stop() {
-	if s.cancel != nil {
-		s.cancel()
+	if s.state != service.StateRUNNING {
+		log.Println("[ERROR][JobScheduler] cannot stop. not running")
+		return
 	}
+	s.Cancel()
 	s.wg.Wait() // wait for running tasks
 	log.Println("[INFO] job scheduler stopped")
 }
