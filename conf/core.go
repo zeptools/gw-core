@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"github.com/zeptools/gw-core/db"
 	"github.com/zeptools/gw-core/db/kvdb"
@@ -22,26 +24,26 @@ import (
 // SU = Type for Session User _ e.g. string, int64, etc
 type Core[SU comparable] struct {
 	AppName             string                     `json:"app_name"`
-	Listen              string                     `json:"listen"`
-	AppRoot             string                     `json:"-"`    // Filled from compiled paths
-	Host                string                     `json:"host"` // Can be used to generate public url endpoints
-	RootCtx             context.Context            `json:"-"`    // Global Context with RootCancel
-	RootCancel          context.CancelFunc         `json:"-"`    // CancelFunc for RootCtx
-	UnixSocket          *unix.Socket               `json:"-"`
-	JobScheduler        *schedjobs.Scheduler       `json:"-"` // PrepareJobScheduler()
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                  `json:"-"` // map[string]string
-	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
-	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
-	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
+	Listen              string                     `json:"listen"`     // HTTP Listen
+	Host                string                     `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
+	DebugOpts           DebugOpts                  `json:"debug_opts"` // Debug Options
+	AppRoot             string                     `json:"-"`          // Filled from compiled paths
+	RootCtx             context.Context            `json:"-"`          // Global Context with RootCancel
+	RootCancel          context.CancelFunc         `json:"-"`          // CancelFunc for RootCtx
+	UnixSocket          *unix.Socket               `json:"-"`          // PrepareUnixSocket()
+	JobScheduler        *schedjobs.Scheduler       `json:"-"`          // PrepareJobScheduler()
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`          // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                  `json:"-"`          // map[string]string
+	SessionLocks        *sync.Map                  `json:"-"`          // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                  `json:"-"`          // map[string]struct{}
+	StorageConf         storages.Conf              `json:"-"`          // LoadStorageConf()
+	DBConf              CommonDBConf               `json:"-"`          // LoadDBConf()
+	HttpClient          *http.Client               `json:"-"`          // for requests to external apis
 	KVDBClient          kvdb.Client                `json:"-"`
 	MainDBClient        sqldb.Client               `json:"-"`
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
 	MainDBPlaceholder   func(...int) string        `json:"-"`
 	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
-	HttpClient          *http.Client               `json:"-"`
-	DebugOpts           DebugOpts                  `json:"debug_opts"`
 }
 
 // BaseInit - 1st step for initialization
@@ -51,7 +53,7 @@ type Core[SU comparable] struct {
 func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
 	c.AppRoot = appRoot
 	// Load .env.json
-	envFilePath := filepath.Join(c.AppRoot, "config", ".core.json")
+	envFilePath := filepath.Join(appRoot, "config", ".core.json")
 	//file, readErr := os.Open(envFilePath) // (*os.File, error)
 	envBytes, err := os.ReadFile(envFilePath) // ([]byte, error)
 	if err != nil {
@@ -60,14 +62,33 @@ func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel 
 	if err = json.Unmarshal(envBytes, c); err != nil {
 		return err
 	}
-	// Set Base Fields
 	c.RootCtx = rootCtx
 	c.RootCancel = rootCancel
+	c.prepareDefaultFeatures()
+	c.startShutdownSignalListener()
+	return nil
+}
+
+func (c *Core[SU]) prepareDefaultFeatures() {
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
-	return nil
+}
+
+var once sync.Once
+
+func (c *Core[SU]) startShutdownSignalListener() {
+	once.Do(func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			sig := <-sigs
+			log.Printf("[INFO] got signal [%s]. shutting down app [%s] ...", sig, c.AppName)
+			c.RootCancel() // broadcast to all child services via Context.Done()
+		}()
+	})
+	log.Printf("[INFO][CORE] shutdown signal listener started")
 }
 
 func (c *Core[SU]) PrepareUnixSocket() {
