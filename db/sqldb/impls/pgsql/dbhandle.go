@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zeptools/gw-core/db/sqldb"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zeptools/gw-core/db/sqldb"
 )
 
 type DBHandle struct {
