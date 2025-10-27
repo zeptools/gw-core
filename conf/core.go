@@ -15,6 +15,7 @@ import (
 	"github.com/zeptools/gw-core/schedjobs"
 	"github.com/zeptools/gw-core/storages"
 	"github.com/zeptools/gw-core/throttle"
+	"github.com/zeptools/gw-core/unix"
 )
 
 // Core - common config
@@ -26,13 +27,14 @@ type Core[SU comparable] struct {
 	Host                string                     `json:"host"` // Can be used to generate public url endpoints
 	RootCtx             context.Context            `json:"-"`    // Global Context with RootCancel
 	RootCancel          context.CancelFunc         `json:"-"`    // CancelFunc for RootCtx
-	JobScheduler        *schedjobs.Scheduler       `json:"-"`    // PrepareJobScheduler()
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`    // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                  `json:"-"`    // map[string]string
-	SessionLocks        *sync.Map                  `json:"-"`    // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                  `json:"-"`    // map[string]struct{}
-	StorageConf         storages.Conf              `json:"-"`    // LoadStorageConf()
-	DBConf              CommonDBConf               `json:"-"`    // LoadDBConf()
+	UnixSocket          *unix.Socket               `json:"-"`
+	JobScheduler        *schedjobs.Scheduler       `json:"-"` // PrepareJobScheduler()
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                  `json:"-"` // map[string]string
+	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
+	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
+	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
 	KVDBClient          kvdb.Client                `json:"-"`
 	MainDBClient        sqldb.Client               `json:"-"`
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
@@ -66,6 +68,10 @@ func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel 
 	c.HttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
 	return nil
+}
+
+func (c *Core[SU]) PrepareUnixSocket() {
+	c.UnixSocket = unix.NewSocket(c.RootCtx, "/tmp/admin.sock")
 }
 
 func (c *Core[SU]) PrepareThrottleBucketStore() {
