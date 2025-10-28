@@ -73,6 +73,7 @@ func (s *Service) run() {
 	}()
 	// run the server in background, push the server error to the error channel
 	go func() {
+		log.Printf("[INFO][HTTPServer] listening on %s ...", s.Server.Addr)
 		if err := s.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.done <- err
 		} else {
