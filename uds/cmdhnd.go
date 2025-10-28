@@ -7,5 +7,5 @@ import (
 type CmdHnd struct {
 	Desc  string
 	Usage string
-	Fn    func(args []string, out io.Writer)
+	Fn    func(args []string, w io.Writer)
 }
