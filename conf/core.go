@@ -20,6 +20,7 @@ import (
 	"github.com/zeptools/gw-core/svc"
 	"github.com/zeptools/gw-core/throttle"
 	"github.com/zeptools/gw-core/uds"
+	"github.com/zeptools/gw-core/web"
 )
 
 // Core - common config
@@ -32,15 +33,16 @@ type Core[SU comparable] struct {
 	AppRoot             string                     `json:"-"`          // Filled from compiled paths
 	RootCtx             context.Context            `json:"-"`          // Global Context with RootCancel
 	RootCancel          context.CancelFunc         `json:"-"`          // CancelFunc for RootCtx
-	UnixSocket          *uds.Service               `json:"-"`          // PrepareUnixSocket()
+	UDSService          *uds.Service               `json:"-"`          // PrepareUDSService()
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`          // PrepareJobScheduler()
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"`          // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                  `json:"-"`          // map[string]string
-	SessionLocks        *sync.Map                  `json:"-"`          // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                  `json:"-"`          // map[string]struct{}
-	StorageConf         storages.Conf              `json:"-"`          // LoadStorageConf()
-	DBConf              CommonDBConf               `json:"-"`          // LoadDBConf()
-	HttpClient          *http.Client               `json:"-"`          // for requests to external apis
+	WebService          *web.Service               `json:"-"`
+	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                  `json:"-"` // map[string]string
+	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
+	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
+	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
+	HttpClient          *http.Client               `json:"-"` // for requests to external apis
 	KVDBClient          kvdb.Client                `json:"-"`
 	MainDBClient        sqldb.Client               `json:"-"`
 	MainDBRawStore      *sqldb.RawStore            `json:"-"`
@@ -124,16 +126,24 @@ func (c *Core[SU]) startShutdownSignalListener() {
 	log.Printf("[INFO][CORE] shutdown signal listener started")
 }
 
-func (c *Core[SU]) PrepareUnixSocket(sockPath string, cmdMap map[string]uds.CmdHnd) {
-	c.UnixSocket = uds.NewService(c.RootCtx, sockPath, cmdMap)
+func (c *Core[SU]) PrepareWebService(addr string, router http.Handler) {
+	c.WebService = web.NewService(c.RootCtx, addr, router)
+	c.AddService(c.WebService)
 }
 
-func (c *Core[SU]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
-	c.ThrottleBucketStore = throttle.NewBucketStore[SU](c.RootCtx, cleanupCycle, cleanupOlderThan)
+func (c *Core[SU]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
+	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdMap)
+	c.AddService(c.UDSService)
 }
 
 func (c *Core[SU]) PrepareJobScheduler() {
 	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
+	c.AddService(c.JobScheduler)
+}
+
+func (c *Core[SU]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
+	c.ThrottleBucketStore = throttle.NewBucketStore[SU](c.RootCtx, cleanupCycle, cleanupOlderThan)
+	c.AddService(c.ThrottleBucketStore)
 }
 
 func (c *Core[SU]) PrepareMainDBRawStore() {
