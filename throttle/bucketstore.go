@@ -30,6 +30,7 @@ func NewBucketStore[K comparable](parentCtx context.Context, cleanupCycle time.D
 		Ctx:              svcCtx,
 		cancel:           svcCancel,
 		state:            svc.StateREADY,
+		done:             make(chan error, 1),
 		cleanupCycle:     cleanupCycle,
 		cleanupOlderThan: cleanupOlderThan,
 		groups:           make(map[string]*BucketGroup[K]),

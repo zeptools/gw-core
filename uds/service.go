@@ -34,8 +34,8 @@ func NewService(parentCtx context.Context, sockPath string, cmdMap map[string]Cm
 		Ctx:        svcCtx,
 		cancel:     svcCancel,
 		state:      svc.StateREADY,
-		SocketPath: sockPath,
 		done:       make(chan error, 1),
+		SocketPath: sockPath,
 		CmdMap:     cmdMap,
 	}
 }
