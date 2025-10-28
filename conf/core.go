@@ -171,30 +171,6 @@ func (c *Core[SU]) LoadStorageConf() error {
 	return nil
 }
 
-func (c *Core[SU]) LoadKVDBConf() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".kv.json")
-	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(confBytes, &c.KVDBConf); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Core[SU]) LoadSQLDBConfs() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
-	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(confBytes, &c.SQLDBConfs); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *Core[SU]) PrepareKVDatabase() error {
 	// Load KV Database Config File
 	err := c.LoadKVDBConf()
@@ -202,6 +178,18 @@ func (c *Core[SU]) PrepareKVDatabase() error {
 		return err
 	}
 	if err = c.PrepareKVDBClient(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[SU]) LoadKVDBConf() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".kv.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.KVDBConf); err != nil {
 		return err
 	}
 	return nil
@@ -249,6 +237,18 @@ func (c *Core[SU]) PrepareSQLDatabases(preload func()) error {
 	}
 	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, c.SQLDBConfs.Main.Type, placeholderPrefix)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[SU]) LoadSQLDBConfs() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.SQLDBConfs); err != nil {
 		return err
 	}
 	return nil
