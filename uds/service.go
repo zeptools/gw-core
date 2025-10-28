@@ -24,6 +24,10 @@ type Service struct {
 	listener   net.Listener
 }
 
+func (s *Service) Name() string {
+	return "UDSService"
+}
+
 func NewService(parentCtx context.Context, sockPath string, cmdMap map[string]CmdHnd) *Service {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Service{

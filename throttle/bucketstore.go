@@ -20,6 +20,10 @@ type BucketStore[K comparable] struct {
 	groups           map[string]*BucketGroup[K]
 }
 
+func (s *BucketStore[K]) Name() string {
+	return "ThrottleBucketStore"
+}
+
 func NewBucketStore[K comparable](parentCtx context.Context, cleanupCycle time.Duration, cleanupOlderThan time.Duration) *BucketStore[K] {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &BucketStore[K]{

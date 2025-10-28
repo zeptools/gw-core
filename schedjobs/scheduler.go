@@ -29,6 +29,10 @@ type Scheduler struct {
 	OnCronJobDeleted     func(job *CronJob)
 }
 
+func (s *Scheduler) Name() string {
+	return "JobScheduler"
+}
+
 func NewScheduler(parentCtx context.Context) *Scheduler {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Scheduler{
