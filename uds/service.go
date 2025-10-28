@@ -138,19 +138,19 @@ func (s *Service) handleConn(c net.Conn) {
 		args := strings.Fields(line)
 		cmdStr := args[0]
 		if cmdStr == "help" {
-			for k, cmd := range s.CmdMap {
-				_, _ = fmt.Fprintf(c, "%-10s %s\n", k, cmd.Desc)
+			for cmdKey, cmdHnd := range s.CmdMap {
+				_, _ = fmt.Fprintf(c, "%-10s %s\n", cmdKey, cmdHnd.Desc)
 			}
 			continue
 		}
 
 		// look it up in the command map
-		if cmd, ok := s.CmdMap[args[0]]; ok {
+		if cmdHnd, ok := s.CmdMap[cmdStr]; ok {
 			log.Printf("[INFO][UDS] requested command: `%s`\n", line)
-			cmd.Fn(args[1:], c)
+			cmdHnd.Fn(args[1:], c)
 			return
 		} else {
-			_, _ = fmt.Fprintf(c, "unknown command: %s\n", args[0])
+			_, _ = fmt.Fprintf(c, "unknown command: %s\n", cmdStr)
 			continue // give another chance
 		}
 	}
