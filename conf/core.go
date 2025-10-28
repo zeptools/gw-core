@@ -45,11 +45,12 @@ type Core[SU comparable] struct {
 	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
 	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
 	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
-	DBConf              CommonDBConf               `json:"-"` // LoadDBConf()
 	HttpClient          *http.Client               `json:"-"` // for requests to external apis
-	KVDBClient          kvdb.Client                `json:"-"`
-	MainDBClient        sqldb.Client               `json:"-"`
-	MainDBRawStore      *sqldb.RawStore            `json:"-"`
+	KVDBConf            kvdb.Conf                  `json:"-"` // LoadKVDBConf()
+	KVDBClient          kvdb.Client                `json:"-"` // PrepareKVDBClient()
+	SQLDBConfs          SQLDBConfs                 `json:"-"` // LoadSQLDBConfs()
+	SQLDBClients        SQLDBClients               `json:"-"` // PrepareSQLDBClients()
+	MainDBRawStore      *sqldb.RawStore            `json:"-"` // ToDo: rawstore for each sql db client
 	MainDBPlaceholder   func(...int) string        `json:"-"`
 	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
 	services            []svc.Service              // Services to Manage
@@ -170,52 +171,72 @@ func (c *Core[SU]) LoadStorageConf() error {
 	return nil
 }
 
-func (c *Core[SU]) LoadDBConf() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", ".databases.json")
+func (c *Core[SU]) LoadKVDBConf() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".kv.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(confBytes, &c.DBConf); err != nil {
+	if err = json.Unmarshal(confBytes, &c.KVDBConf); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Core[SU]) PrepareDatabases(preload func()) error {
-	err := c.LoadDBConf()
+func (c *Core[SU]) LoadSQLDBConfs() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
 	}
+	if err = json.Unmarshal(confBytes, &c.SQLDBConfs); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Key-Value DB Client
-	switch c.DBConf.KV.Type {
+func (c *Core[SU]) PrepareKVDatabase() error {
+	// Load KV Database Config File
+	err := c.LoadKVDBConf()
+	if err != nil {
+		return err
+	}
+	if err = c.PrepareKVDBClient(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[SU]) PrepareKVDBClient() error {
+	switch c.KVDBConf.Type {
 	case "redis":
-		c.KVDBClient = &redis.Client{Conf: &c.DBConf.KV}
-		if err = c.KVDBClient.Init(); err != nil {
+		c.KVDBClient = &redis.Client{Conf: &c.KVDBConf}
+		if err := c.KVDBClient.Init(); err != nil {
 			return err
 		}
 	// case "memcached"
 	default:
 		return errors.New("unsupported key-value database type")
 	}
+	return nil
+}
 
-	// Main SQL DB Client
-	switch c.DBConf.Main.Type {
-	case "mysql":
-		c.MainDBClient = &mysql.Client{Conf: &c.DBConf.Main}
-	case "pgsql":
-		c.MainDBClient = &pgsql.Client{Conf: &c.DBConf.Main}
-	default:
-		return errors.New("unsupported sql database Type")
-	}
-	if err = c.MainDBClient.Init(); err != nil {
+func (c *Core[SU]) PrepareSQLDatabases(preload func()) error {
+	// Load SQL Databases Config File
+	err := c.LoadSQLDBConfs()
+	if err != nil {
 		return err
 	}
+
+	// Main SQL DB Client
+	if err = c.PrepareSQLDBClients(); err != nil {
+		return err
+	}
+
 	// Main SQL DB Placeholder Prefix
-	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[c.DBConf.Main.Type]
+	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[c.SQLDBConfs.Main.Type]
 	if !ok {
-		return errors.New("unsupported database type: " + c.DBConf.Main.Type)
+		return errors.New("unsupported database type: " + c.SQLDBConfs.Main.Type)
 	}
 	// Main SQL DB Placeholder Gen Fns
 	c.MainDBPlaceholder = sqldb.PlaceholderGF(placeholderPrefix)
@@ -223,11 +244,30 @@ func (c *Core[SU]) PrepareDatabases(preload func()) error {
 	// Main SQL DB SQL RawStore
 	c.PrepareMainDBRawStore()
 	// Preload SQL Models & Packages
-	preload()
-	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, c.DBConf.Main.Type, placeholderPrefix)
+	if preload != nil {
+		preload()
+	}
+	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, c.SQLDBConfs.Main.Type, placeholderPrefix)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (c *Core[SU]) PrepareSQLDBClients() error {
+	// Main SQL DB Client
+	switch c.SQLDBConfs.Main.Type {
+	case "mysql":
+		c.SQLDBClients.Main = &mysql.Client{Conf: &c.SQLDBConfs.Main}
+	case "pgsql":
+		c.SQLDBClients.Main = &pgsql.Client{Conf: &c.SQLDBConfs.Main}
+	default:
+		return errors.New("unsupported sql database Type")
+	}
+	if err := c.SQLDBClients.Main.Init(); err != nil {
+		return err
+	}
+	// Additional SQL DB Clients
 	return nil
 }
 
@@ -239,14 +279,17 @@ func (c *Core[SU]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
 	db.CloseClient("KVDBClient", c.KVDBClient)
-	db.CloseClient("MainDBClient", c.MainDBClient)
+	db.CloseClient("Main SQLDBClient", c.SQLDBClients.Main)
 	//----
 	log.Println("[INFO] App Resource Cleanup Complete")
 }
 
-type CommonDBConf struct {
-	KV   kvdb.Conf  `json:"kv"`
+type SQLDBConfs struct {
 	Main sqldb.Conf `json:"main"`
+}
+
+type SQLDBClients struct {
+	Main sqldb.Client
 }
 
 type DebugOpts struct {
