@@ -16,6 +16,7 @@ import (
 // - appName: for logging
 // - cleanup: optional cleanup function to release resources // ToDo: take this out as a core system shutdown process
 // - timeout: max duration for shutdown
+
 func RunWithGracefulShutdown(server *http.Server, appName string, cleanup func(), timeout time.Duration) error {
 	// Channel to capture server errors
 	serverErrChan := make(chan error, 1) // error channel

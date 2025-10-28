@@ -69,10 +69,14 @@ func (s *Service) run() {
 	go func() {
 		<-s.Ctx.Done()
 		log.Println("[INFO][HTTPServer] stopping...")
-		gracefulShutdownCtx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		s.Server.SetKeepAlivesEnabled(false)
+		gracefulShutdownCtx, cancel := context.WithTimeout(s.Ctx, 15*time.Second)
 		defer cancel()
 		if err := s.Server.Shutdown(gracefulShutdownCtx); err != nil {
 			log.Printf("[ERROR][HTTPServer] shutdown failed: %v", err)
+			s.done <- err
+		} else {
+			s.done <- nil
 		}
 	}()
 	// run the server in background, push the server error to the error channel
