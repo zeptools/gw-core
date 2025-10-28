@@ -3,6 +3,7 @@ package conf
 import (
 	"context"
 	"encoding/json/v2"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -14,7 +15,10 @@ import (
 
 	"github.com/zeptools/gw-core/db"
 	"github.com/zeptools/gw-core/db/kvdb"
+	"github.com/zeptools/gw-core/db/kvdb/impls/redis"
 	"github.com/zeptools/gw-core/db/sqldb"
+	"github.com/zeptools/gw-core/db/sqldb/impls/mysql"
+	"github.com/zeptools/gw-core/db/sqldb/impls/pgsql"
 	"github.com/zeptools/gw-core/schedjobs"
 	"github.com/zeptools/gw-core/storages"
 	"github.com/zeptools/gw-core/svc"
@@ -134,9 +138,9 @@ func (c *Core[SU]) startShutdownSignalListener() {
 	log.Printf("[INFO][CORE] shutdown signal listener started")
 }
 
-func (c *Core[SU]) PrepareWebService(addr string, router http.Handler) {
-	c.WebService = web.NewService(c.RootCtx, addr, router)
-	c.AddService(c.WebService)
+func (c *Core[SU]) PrepareJobScheduler() {
+	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
+	c.AddService(c.JobScheduler)
 }
 
 func (c *Core[SU]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
@@ -144,9 +148,9 @@ func (c *Core[SU]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdH
 	c.AddService(c.UDSService)
 }
 
-func (c *Core[SU]) PrepareJobScheduler() {
-	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
-	c.AddService(c.JobScheduler)
+func (c *Core[SU]) PrepareWebService(addr string, router http.Handler) {
+	c.WebService = web.NewService(c.RootCtx, addr, router)
+	c.AddService(c.WebService)
 }
 
 func (c *Core[SU]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
@@ -154,8 +158,16 @@ func (c *Core[SU]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanu
 	c.AddService(c.ThrottleBucketStore)
 }
 
-func (c *Core[SU]) PrepareMainDBRawStore() {
-	c.MainDBRawStore = sqldb.NewRawStore()
+func (c *Core[SU]) LoadStorageConf() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".storages.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.StorageConf); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Core[SU]) LoadDBConf() error {
@@ -170,16 +182,57 @@ func (c *Core[SU]) LoadDBConf() error {
 	return nil
 }
 
-func (c *Core[SU]) LoadStorageConf() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", ".storages.json")
-	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+func (c *Core[SU]) PrepareDatabases(preload func()) error {
+	err := c.LoadDBConf()
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(confBytes, &c.StorageConf); err != nil {
+
+	// Key-Value DB Client
+	switch c.DBConf.KV.Type {
+	case "redis":
+		c.KVDBClient = &redis.Client{Conf: &c.DBConf.KV}
+		if err = c.KVDBClient.Init(); err != nil {
+			return err
+		}
+	// case "memcached"
+	default:
+		return errors.New("unsupported key-value database type")
+	}
+
+	// Main SQL DB Client
+	switch c.DBConf.Main.Type {
+	case "mysql":
+		c.MainDBClient = &mysql.Client{Conf: &c.DBConf.Main}
+	case "pgsql":
+		c.MainDBClient = &pgsql.Client{Conf: &c.DBConf.Main}
+	default:
+		return errors.New("unsupported sql database Type")
+	}
+	if err = c.MainDBClient.Init(); err != nil {
+		return err
+	}
+	// Main SQL DB Placeholder Prefix
+	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[c.DBConf.Main.Type]
+	if !ok {
+		return errors.New("unsupported database type: " + c.DBConf.Main.Type)
+	}
+	// Main SQL DB Placeholder Gen Fns
+	c.MainDBPlaceholder = sqldb.PlaceholderGF(placeholderPrefix)
+	c.MainDBPlaceholders = sqldb.PlaceholdersGF(placeholderPrefix)
+	// Main SQL DB SQL RawStore
+	c.PrepareMainDBRawStore()
+	// Preload SQL Models & Packages
+	preload()
+	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, c.DBConf.Main.Type, placeholderPrefix)
+	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *Core[SU]) PrepareMainDBRawStore() {
+	c.MainDBRawStore = sqldb.NewRawStore()
 }
 
 func (c *Core[SU]) ResourceCleanUp() {

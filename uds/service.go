@@ -80,7 +80,8 @@ func (s *Service) run() {
 		if err := s.listener.Close(); err != nil {
 			log.Printf("[ERROR][UDS] cannot close listener: %v", err)
 		}
-		if err := os.Remove(s.SocketPath); err != nil {
+		// To avoid TOCTOU race, just try removing before checking if it exists.
+		if err := os.Remove(s.SocketPath); err != nil && !os.IsNotExist(err) {
 			log.Printf("[ERROR][UDS] cannot remove socket file: %v", err)
 		}
 	}()
