@@ -106,11 +106,16 @@ func (s *Service) run() {
 }
 
 func (s *Service) handleConn(c net.Conn) {
+	go func() {
+		<-s.Ctx.Done()
+		_ = c.Close()
+	}()
+
 	defer func() {
 		if err := c.Close(); err != nil {
-			log.Printf("[ERROR][UDS] closing connection: %v\n", err)
-		} else {
-			log.Println("[INFO][UDS] connection closed")
+			if !errors.Is(err, net.ErrClosed) { // && !strings.Contains(err.Error(), "use of closed network connection")
+				log.Printf("[ERROR][UDS] closing connection: %v\n", err)
+			}
 		}
 	}()
 
@@ -131,13 +136,22 @@ func (s *Service) handleConn(c net.Conn) {
 			continue
 		}
 		args := strings.Fields(line)
-		log.Printf("[INFO][UDS] requested command: `%s`\n", line)
+		cmdStr := args[0]
+		if cmdStr == "help" {
+			for k, cmd := range s.CmdMap {
+				_, _ = fmt.Fprintf(c, "%-10s %s\n", k, cmd.Desc)
+			}
+			continue
+		}
 
 		// look it up in the command map
 		if cmd, ok := s.CmdMap[args[0]]; ok {
-			cmd.Fn(s.Ctx, args, c) // pass context and writer
+			log.Printf("[INFO][UDS] requested command: `%s`\n", line)
+			cmd.Fn(args[1:], c)
+			return
 		} else {
 			_, _ = fmt.Fprintf(c, "unknown command: %s\n", args[0])
+			continue // give another chance
 		}
 	}
 
