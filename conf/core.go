@@ -111,6 +111,12 @@ func (c *Core[SU]) WaitServicesDone() error {
 	return nil
 }
 
+func (c *Core[SU]) StopServices() {
+	for _, s := range c.services {
+		s.Stop()
+	}
+}
+
 var once sync.Once
 
 func (c *Core[SU]) startShutdownSignalListener() {
@@ -174,7 +180,7 @@ func (c *Core[SU]) LoadStorageConf() error {
 	return nil
 }
 
-func (c *Core[SU]) CleanUp() {
+func (c *Core[SU]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
 	db.CloseClient("KVDBClient", c.KVDBClient)
