@@ -84,7 +84,9 @@ func (c *Core[SU]) prepareDefaultFeatures() {
 }
 
 func (c *Core[SU]) AddService(s svc.Service) {
+	log.Printf("[INFO] adding service: %s", s.Name())
 	c.services = append(c.services, s)
+	log.Printf("[INFO] total services: %d", len(c.services))
 }
 
 func (c *Core[SU]) StartServices() error {
