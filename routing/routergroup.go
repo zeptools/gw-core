@@ -6,18 +6,17 @@ import (
 	"strings"
 )
 
-type RouteGroup[T any] struct {
+type RouteGroup struct {
 	Router          // [Embedded Interface]
-	Env             *T
 	Prefix          string
 	HandlerWrappers []HandlerWrapper // Group Handler Wrappers
 }
 
 // Ensure RouteGroup[any] implements Router
-var _ Router = (*RouteGroup[any])(nil)
+var _ Router = (*RouteGroup)(nil)
 
 // Handle registers a route pattern
-func (g *RouteGroup[T]) Handle(subpattern string, handler http.Handler, handlerWrappers ...HandlerWrapper) {
+func (g *RouteGroup) Handle(subpattern string, handler http.Handler, handlerWrappers ...HandlerWrapper) {
 	var (
 		subPatternParts []string
 		subpath         string
@@ -78,7 +77,7 @@ func (g *RouteGroup[T]) Handle(subpattern string, handler http.Handler, handlerW
 	g.Router.Handle(fullPattern, wrappedHandler)
 }
 
-func (g *RouteGroup[T]) HandleFunc(subpattern string, handleFunc func(http.ResponseWriter, *http.Request), handlerWrappers ...HandlerWrapper) {
+func (g *RouteGroup) HandleFunc(subpattern string, handleFunc func(http.ResponseWriter, *http.Request), handlerWrappers ...HandlerWrapper) {
 	g.Handle(subpattern, http.HandlerFunc(handleFunc), handlerWrappers...)
 }
 
@@ -92,15 +91,14 @@ func (g *RouteGroup[T]) HandleFunc(subpattern string, handleFunc func(http.Respo
 //	    foobaz.Handle("POST bam", foobazbamPostHandler)  // "POST /foo/baz/bam"
 //	  }
 //	}
-func (g *RouteGroup[T]) Group(subPrefix string, batch func(*RouteGroup[T]), handlerWrappers ...HandlerWrapper) *RouteGroup[T] {
-	rg := &RouteGroup[T]{
+func (g *RouteGroup) Group(subPrefix string, batch func(*RouteGroup), handlerWrappers ...HandlerWrapper) *RouteGroup {
+	subg := &RouteGroup{
 		Router:          g.Router,                                      // same router
-		Env:             g.Env,                                         // same Env
 		Prefix:          g.Prefix + subPrefix,                          // extended prefix
 		HandlerWrappers: append(g.HandlerWrappers, handlerWrappers...), // handlerwrappers appended
 	}
 
-	batch(rg)
+	batch(subg)
 
-	return rg // to do more with this routegroup if any
+	return subg // to do more with this routegroup if any
 }

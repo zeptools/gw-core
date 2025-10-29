@@ -2,16 +2,15 @@ package routing
 
 import "net/http"
 
-type BaseRouter[T any] struct {
+type BaseRouter struct {
 	*http.ServeMux // Embedded
-	Env            *T
 }
 
 // Ensure BaseRouter[any] implements Router
-var _ Router = (*BaseRouter[any])(nil)
+var _ Router = (*BaseRouter)(nil)
 
 // Handle registers a route pattern
-func (r *BaseRouter[T]) Handle(pattern string, handler http.Handler, handlerWrappers ...HandlerWrapper) {
+func (r *BaseRouter) Handle(pattern string, handler http.Handler, handlerWrappers ...HandlerWrapper) {
 	wrappedHandler := handler
 	for i := len(handlerWrappers) - 1; i >= 0; i-- {
 		wrappedHandler = handlerWrappers[i].Wrap(wrappedHandler)
@@ -19,20 +18,19 @@ func (r *BaseRouter[T]) Handle(pattern string, handler http.Handler, handlerWrap
 	r.ServeMux.Handle(pattern, wrappedHandler)
 }
 
-func (r *BaseRouter[T]) HandleFunc(pattern string, handleFunc func(http.ResponseWriter, *http.Request), handlerWrappers ...HandlerWrapper) {
+func (r *BaseRouter) HandleFunc(pattern string, handleFunc func(http.ResponseWriter, *http.Request), handlerWrappers ...HandlerWrapper) {
 	r.Handle(pattern, http.HandlerFunc(handleFunc), handlerWrappers...)
 }
 
 // Group lets you register routes under a common Prefix + middleware.
-func (r *BaseRouter[T]) Group(prefix string, batch func(*RouteGroup[T]), handlerWrappers ...HandlerWrapper) *RouteGroup[T] {
-	rg := &RouteGroup[T]{
+func (r *BaseRouter) Group(prefix string, batch func(*RouteGroup), handlerWrappers ...HandlerWrapper) *RouteGroup {
+	g := &RouteGroup{
 		Router:          r,
-		Env:             r.Env,
 		Prefix:          prefix,
 		HandlerWrappers: handlerWrappers,
 	}
 
-	batch(rg)
+	batch(g)
 
-	return rg // to do more with this routegroup if any
+	return g // to do more with this routegroup if any
 }
