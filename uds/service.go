@@ -159,7 +159,7 @@ func (s *Service) handleConn(c net.Conn) {
 			}
 			return
 		} else {
-			_, _ = fmt.Fprintf(c, "unknown command: %s\n", cmdStr)
+			_, _ = fmt.Fprintf(c, "unknown command: %s\n\n", cmdStr)
 			continue // give another chance
 		}
 	}
