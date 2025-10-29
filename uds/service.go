@@ -142,7 +142,7 @@ func (s *Service) handleConn(c net.Conn) {
 			return
 		}
 		if cmdStr == "help" {
-			_, _ = fmt.Fprintln(c, "")
+			_, _ = fmt.Fprintln(c, "\ncommmands:")
 			for cmdKey, cmdHnd := range s.CmdMap {
 				_, _ = fmt.Fprintf(c, "%-36s %s\n", cmdKey, cmdHnd.Desc)
 			}
