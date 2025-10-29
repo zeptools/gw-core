@@ -122,6 +122,7 @@ func (s *Service) handleConn(c net.Conn) {
 	reader := bufio.NewReader(io.LimitReader(c, 1<<20)) // 1 MB max per line
 
 	for {
+		_, _ = fmt.Fprint(c, "> ")
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -150,9 +151,12 @@ func (s *Service) handleConn(c net.Conn) {
 		}
 		// look it up in the command map
 		if cmdHnd, ok := s.CmdMap[cmdStr]; ok {
-			log.Printf("[INFO][UDS] requested command `%s`\n", line)
-			cmdHnd.Fn(args[1:], c)
-			log.Printf("[INFO][UDS] command `%s` done\n", line)
+			log.Printf("[INFO][UDS] `%s`\n", line)
+			if err = cmdHnd.Fn(args[1:], c); err != nil {
+				log.Printf("[ERROR][UDS] `%s` terminated: %v\n", line, err)
+			} else {
+				log.Printf("[INFO][UDS] `%s` completed\n", line)
+			}
 			return
 		} else {
 			_, _ = fmt.Fprintf(c, "unknown command: %s\n", cmdStr)

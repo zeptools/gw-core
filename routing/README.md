@@ -1,14 +1,11 @@
 # Routing System
 
-## - Aliasing with Type Instantiation
+## - Just Using Bundled BaseRouter and RouteGroup
 
 ```
-type Router = routing.BaseRouter[Env]
-
-type RouteGroup = routing.RouteGroup[Env]
+type Router = routing.BaseRouter
+type RouteGroup = routing.RouteGroup
 ```
-
-where `Env` is the Concrete Type in your application.
 
 ## - Base Middleware to Apply Entire Requests
 ```
@@ -25,7 +22,7 @@ You can write your own router.
 e.g.
 ```
 type Router struct {
-	routing.BaseRouter[Env]
+	routing.BaseRouter
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +31,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     router.ServeMux.ServeHTTP(w, r.WithContext(ctx))
     ...
 }
-```
 
-still, your RouteGroup can be an alias with type instantiation:
-
+// still, your RouteGroup can be an alias with type instantiation:
+type RouteGroup = routing.RouteGroup
 ```
-type RouteGroup = routing.RouteGroup[Env]
-```
-
