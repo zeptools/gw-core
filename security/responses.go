@@ -1,4 +1,4 @@
-package sec
+package security
 
 type AuthResponseBody struct {
 	AccessToken  string `json:"access_token"`

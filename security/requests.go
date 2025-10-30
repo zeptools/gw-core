@@ -1,4 +1,4 @@
-package sec
+package security
 
 type AuthRequestBody struct {
 	AuthClientID string `json:"auth_client_id"`
