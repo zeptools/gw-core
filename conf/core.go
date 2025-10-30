@@ -28,8 +28,8 @@ import (
 )
 
 // Core - common config
-// SU = Type for Session User _ e.g. string, int64, etc
-type Core[SU comparable] struct {
+// B = BucketID Type _ e.g. string, int64, etc
+type Core[B comparable] struct {
 	AppName             string                     `json:"app_name"`
 	Listen              string                     `json:"listen"`     // HTTP Server Listen IP:PORT Address
 	Host                string                     `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
@@ -40,7 +40,7 @@ type Core[SU comparable] struct {
 	UDSService          *uds.Service               `json:"-"`          // PrepareUDSService()
 	JobScheduler        *schedjobs.Scheduler       `json:"-"`          // PrepareJobScheduler()
 	WebService          *web.Service               `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[SU]  `json:"-"` // PrepareThrottleBucketStore()
+	ThrottleBucketStore *throttle.BucketStore[B]   `json:"-"` // PrepareThrottleBucketStore()
 	VolatileKV          *sync.Map                  `json:"-"` // map[string]string
 	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
 	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
@@ -62,7 +62,7 @@ type Core[SU comparable] struct {
 // 2. load config/.core.json file
 // 3. prepare base fields
 // 4. Start ShutdownSignalListener
-func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
+func (c *Core[B]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
 	c.AppRoot = appRoot
 	// Load .env.json
 	envFilePath := filepath.Join(appRoot, "config", ".core.json")
@@ -81,20 +81,20 @@ func (c *Core[SU]) BaseInit(appRoot string, rootCtx context.Context, rootCancel 
 	return nil
 }
 
-func (c *Core[SU]) prepareDefaultFeatures() {
+func (c *Core[B]) prepareDefaultFeatures() {
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.HttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
 }
 
-func (c *Core[SU]) AddService(s svc.Service) {
+func (c *Core[B]) AddService(s svc.Service) {
 	log.Printf("[INFO] adding service: %s", s.Name())
 	c.services = append(c.services, s)
 	log.Printf("[INFO] total services: %d", len(c.services))
 }
 
-func (c *Core[SU]) StartServices() error {
+func (c *Core[B]) StartServices() error {
 	c.done = make(chan error, len(c.services))
 	for _, s := range c.services {
 		err := s.Start()
@@ -109,7 +109,7 @@ func (c *Core[SU]) StartServices() error {
 	return nil
 }
 
-func (c *Core[SU]) WaitServicesDone() error {
+func (c *Core[B]) WaitServicesDone() error {
 	for i := 0; i < len(c.services); i++ {
 		if err := <-c.done; err != nil {
 			return err
@@ -118,7 +118,7 @@ func (c *Core[SU]) WaitServicesDone() error {
 	return nil
 }
 
-func (c *Core[SU]) StopServices() {
+func (c *Core[B]) StopServices() {
 	for _, s := range c.services {
 		s.Stop()
 	}
@@ -126,7 +126,7 @@ func (c *Core[SU]) StopServices() {
 
 var once sync.Once
 
-func (c *Core[SU]) startShutdownSignalListener() {
+func (c *Core[B]) startShutdownSignalListener() {
 	once.Do(func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -139,27 +139,27 @@ func (c *Core[SU]) startShutdownSignalListener() {
 	log.Printf("[INFO][CORE] shutdown signal listener started")
 }
 
-func (c *Core[SU]) PrepareJobScheduler() {
+func (c *Core[B]) PrepareJobScheduler() {
 	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
 	c.AddService(c.JobScheduler)
 }
 
-func (c *Core[SU]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
+func (c *Core[B]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
 	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdMap)
 	c.AddService(c.UDSService)
 }
 
-func (c *Core[SU]) PrepareWebService(addr string, router http.Handler) {
+func (c *Core[B]) PrepareWebService(addr string, router http.Handler) {
 	c.WebService = web.NewService(c.RootCtx, addr, router)
 	c.AddService(c.WebService)
 }
 
-func (c *Core[SU]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
-	c.ThrottleBucketStore = throttle.NewBucketStore[SU](c.RootCtx, cleanupCycle, cleanupOlderThan)
+func (c *Core[B]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
+	c.ThrottleBucketStore = throttle.NewBucketStore[B](c.RootCtx, cleanupCycle, cleanupOlderThan)
 	c.AddService(c.ThrottleBucketStore)
 }
 
-func (c *Core[SU]) LoadStorageConf() error {
+func (c *Core[B]) LoadStorageConf() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".storages.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -171,7 +171,7 @@ func (c *Core[SU]) LoadStorageConf() error {
 	return nil
 }
 
-func (c *Core[SU]) PrepareKVDatabase() error {
+func (c *Core[B]) PrepareKVDatabase() error {
 	// Load KV Database Config File
 	err := c.LoadKVDBConf()
 	if err != nil {
@@ -183,7 +183,7 @@ func (c *Core[SU]) PrepareKVDatabase() error {
 	return nil
 }
 
-func (c *Core[SU]) LoadKVDBConf() error {
+func (c *Core[B]) LoadKVDBConf() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".kv.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -195,7 +195,7 @@ func (c *Core[SU]) LoadKVDBConf() error {
 	return nil
 }
 
-func (c *Core[SU]) PrepareKVDBClient() error {
+func (c *Core[B]) PrepareKVDBClient() error {
 	switch c.KVDBConf.Type {
 	case "redis":
 		c.KVDBClient = &redis.Client{Conf: &c.KVDBConf}
@@ -209,7 +209,7 @@ func (c *Core[SU]) PrepareKVDBClient() error {
 	return nil
 }
 
-func (c *Core[SU]) PrepareSQLDatabases(preload func()) error {
+func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 	// Load SQL Databases Config File
 	err := c.LoadSQLDBConfs()
 	if err != nil {
@@ -242,7 +242,7 @@ func (c *Core[SU]) PrepareSQLDatabases(preload func()) error {
 	return nil
 }
 
-func (c *Core[SU]) LoadSQLDBConfs() error {
+func (c *Core[B]) LoadSQLDBConfs() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -254,7 +254,7 @@ func (c *Core[SU]) LoadSQLDBConfs() error {
 	return nil
 }
 
-func (c *Core[SU]) PrepareSQLDBClients() error {
+func (c *Core[B]) PrepareSQLDBClients() error {
 	// Main SQL DB Client
 	switch c.SQLDBConfs.Main.Type {
 	case "mysql":
@@ -271,11 +271,11 @@ func (c *Core[SU]) PrepareSQLDBClients() error {
 	return nil
 }
 
-func (c *Core[SU]) PrepareMainDBRawStore() {
+func (c *Core[B]) PrepareMainDBRawStore() {
 	c.MainDBRawStore = sqldb.NewRawStore()
 }
 
-func (c *Core[SU]) ResourceCleanUp() {
+func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
 	db.CloseClient("KVDBClient", c.KVDBClient)

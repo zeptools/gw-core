@@ -93,12 +93,12 @@ func (s *BucketStore[K]) GetBucketGroup(id string) (*BucketGroup[K], bool) {
 	return g, ok
 }
 
-func (s *BucketStore[K]) GetBucket(groupID string, userID K) (*Bucket[K], bool) {
+func (s *BucketStore[K]) GetBucket(groupID string, localBucketID K) (*Bucket[K], bool) {
 	g, ok := s.groups[groupID]
 	if !ok {
 		return nil, false
 	}
-	return g.GetBucket(userID)
+	return g.GetBucket(localBucketID)
 }
 
 func (s *BucketStore[K]) SetBucketGroup(id string, conf *BucketConf) {
@@ -108,16 +108,16 @@ func (s *BucketStore[K]) SetBucketGroup(id string, conf *BucketConf) {
 	}
 }
 
-func (s *BucketStore[K]) Allow(groupID string, userID K, now time.Time) bool {
+func (s *BucketStore[K]) Allow(groupID string, localBucketID K, now time.Time) bool {
 	g, ok := s.GetBucketGroup(groupID)
 	if !ok {
 		return false // Invalid groupID always Blocked
 	}
-	b, ok := g.GetBucket(userID)
+	b, ok := g.GetBucket(localBucketID)
 	if ok {
 		return b.Allow(now)
 	}
 	// consume 1 token from the fresh bucket
-	g.SetBucket(userID, g.conf.Burst-1, now)
+	g.SetBucket(localBucketID, g.conf.Burst-1, now)
 	return true
 }
