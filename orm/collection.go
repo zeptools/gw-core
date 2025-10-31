@@ -130,18 +130,42 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
+// LinkBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
+// ForeignKeyField is on the Child
+// RelationField is on the Child
 func LinkBelongsTo[
-	CP Identifiable[CID], CID comparable,
-	PP Identifiable[PID], PID comparable,
+CP Identifiable[CID], CID comparable, // Child
+PP Identifiable[PID], PID comparable, // Parent
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) {
 	for _, child := range children.Map {
 		if parent, ok := parents.Map[*foreignKeyFieldPtr(child)]; ok {
 			*relationFieldPtr(child) = parent
+		}
+	}
+}
+
+// LinkHasMany connects ParentCollection-ChildCollection where a Parent-HasMany-Children
+// ForeignKeyField is on the Child
+// RelationField (a Slice) is on the Parent
+func LinkHasMany[
+PP Identifiable[PID], PID comparable, // Parent
+CP Identifiable[CID], CID comparable, // Child
+](
+	parents *ModelCollection[PP, PID],
+	children *ModelCollection[CP, CID],
+	foreignKeyFieldPtr func(CP) *PID, // on the child
+	relationFieldPtr func(PP) *[]CP,  // on the parent, slice
+) {
+	for _, child := range children.Map {
+		pid := *foreignKeyFieldPtr(child)
+		if parent, ok := parents.Map[pid]; ok {
+			relation := relationFieldPtr(parent)
+			*relation = append(*relation, child)
 		}
 	}
 }
