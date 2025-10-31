@@ -6,8 +6,8 @@ import (
 )
 
 func QueryItems[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -22,8 +22,8 @@ func QueryItems[
 }
 
 func RowsToItems[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
 	var itemptrs []*M
 	for rows.Next() {
@@ -42,9 +42,9 @@ func RowsToItems[
 }
 
 func QueryIDItemsMap[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -59,11 +59,11 @@ func QueryIDItemsMap[
 }
 
 func RowsToIDItemsMap[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](rows Rows) (map[ID]*M, error) { // Returns a Map of ID to Model-Pointers
-	var idItemptrs map[ID]*M
+	idItemptrs := map[ID]*M{}
 	for rows.Next() {
 		var item M    // struct with zero values for the fields
 		p := P(&item) // p is *M, which satisfies targetFieldsProvider interface
@@ -80,8 +80,8 @@ func RowsToIDItemsMap[
 }
 
 func QueryItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -93,8 +93,8 @@ func QueryItem[
 }
 
 func RowToNewItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
 	var item M     // struct with zero values for the fields
 	p := MP(&item) // p is *M, which satisfies targetFieldsProvider interface
