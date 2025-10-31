@@ -3,8 +3,8 @@ package pgsql
 import (
 	"errors"
 
-	"github.com/zeptools/gw-core/db/sqldb"
 	"github.com/jackc/pgx/v5"
+	"github.com/zeptools/gw-core/db/sqldb"
 )
 
 type Row struct {
