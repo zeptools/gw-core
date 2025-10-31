@@ -134,13 +134,13 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 func LinkBelongsTo[
-CP Identifiable[CID], CID comparable, // Child
-PP Identifiable[PID], PID comparable, // Parent
+	CP Identifiable[CID], CID comparable, // Child
+	PP Identifiable[PID], PID comparable, // Parent
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP,    // on the child
+	relationFieldPtr func(CP) *PP, // on the child
 ) {
 	for _, child := range children.Map {
 		if parent, ok := parents.Map[*foreignKeyFieldPtr(child)]; ok {
@@ -153,19 +153,24 @@ PP Identifiable[PID], PID comparable, // Parent
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-PP Identifiable[PID], PID comparable, // Parent
-CP Identifiable[CID], CID comparable, // Child
+	PP Identifiable[PID], PID comparable, // Parent
+	CP Identifiable[CID], CID comparable, // Child
 ](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(PP) *[]CP,  // on the parent, slice
+	relationFieldPtr func(PP) *[]CP, // on the parent, slice
 ) {
+	grouped := make(map[PID][]CP, len(parents.Map))
 	for _, child := range children.Map {
-		pid := *foreignKeyFieldPtr(child)
-		if parent, ok := parents.Map[pid]; ok {
-			relation := relationFieldPtr(parent)
-			*relation = append(*relation, child)
+		fk := *foreignKeyFieldPtr(child)
+		grouped[fk] = append(grouped[fk], child)
+	}
+	for id, parent := range parents.Map {
+		if kids, ok := grouped[id]; ok {
+			*relationFieldPtr(parent) = kids
+		} else {
+			*relationFieldPtr(parent) = []CP{}
 		}
 	}
 }
