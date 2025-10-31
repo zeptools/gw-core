@@ -130,17 +130,18 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
-// LinkBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
+// LinkOptionalBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
 // ForeignKeyField is on the Child
 // RelationField is on the Child
-func LinkBelongsTo[
-	CP Identifiable[CID], CID comparable, // Child
-	PP Identifiable[PID], PID comparable, // Parent
+// Optional Version
+func LinkOptionalBelongsTo[
+CP Identifiable[CID], CID comparable, // Child
+PP Identifiable[PID], PID comparable, // Parent
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) {
 	for _, child := range children.Map {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -154,20 +155,23 @@ func LinkBelongsTo[
 	}
 }
 
-func LinkStrictlyBelongsTo[
-	CP Identifiable[CID], CID comparable, // Child
-	PP Identifiable[PID], PID comparable, // Parent
+// LinkBelongsTo - Strict Version
+// ForeignKeyField is on the Child
+// RelationField is on the Child
+func LinkBelongsTo[
+CP Identifiable[CID], CID comparable, // Child
+PP Identifiable[PID], PID comparable, // Parent
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) error {
 	for _, child := range children.Map {
 		fkPtr := foreignKeyFieldPtr(child)
 		if fkPtr == nil {
 			return fmt.Errorf(
-				"LinkStrictlyBelongsTo: nil foreign key for child ID %v",
+				"LinkBelongsTo: nil foreign key for child ID %v",
 				child.GetID(),
 			)
 		}
@@ -175,7 +179,7 @@ func LinkStrictlyBelongsTo[
 		parent, ok := parents.Map[fk]
 		if !ok {
 			return fmt.Errorf(
-				"LinkStrictlyBelongsTo: parent with ID %v not found for child ID %v",
+				"LinkBelongsTo: parent with ID %v not found for child ID %v",
 				fk, child.GetID(),
 			)
 		}
@@ -188,13 +192,13 @@ func LinkStrictlyBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-	PP Identifiable[PID], PID comparable, // Parent
-	CP Identifiable[CID], CID comparable, // Child
+PP Identifiable[PID], PID comparable, // Parent
+CP Identifiable[CID], CID comparable, // Child
 ](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(PP) *[]CP, // on the parent, slice
+	relationFieldPtr func(PP) *[]CP,  // on the parent, slice
 ) {
 	grouped := make(map[PID][]CP, len(parents.Map))
 	for _, child := range children.Map {
