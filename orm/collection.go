@@ -55,6 +55,21 @@ func (c *ModelCollection[MP, ID]) IDs() []ID {
 	return ids
 }
 
+func (c *ModelCollection[MP, ID]) IDsAsAny() []any {
+	if len(c.Order) > 0 {
+		ids := make([]any, len(c.Order))
+		for i, id := range c.Order {
+			ids[i] = id
+		}
+		return ids
+	}
+	ids := make([]any, 0, len(c.Map))
+	for id := range c.Map {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
 	for _, item := range c.Map {
 		fn(item)
