@@ -70,6 +70,21 @@ func (c *ModelCollection[MP, ID]) IDsAsAny() []any {
 	return ids
 }
 
+func (c *ModelCollection[MP, ID]) Items() []MP {
+	if len(c.Order) > 0 {
+		items := make([]MP, 0, len(c.Order))
+		for _, id := range c.Order {
+			items = append(items, c.Map[id])
+		}
+		return items
+	}
+	items := make([]MP, 0, len(c.Map))
+	for _, item := range c.Map {
+		items = append(items, item)
+	}
+	return items
+}
+
 func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
 	for _, item := range c.Map {
 		fn(item)
@@ -116,13 +131,13 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 }
 
 func LinkBelongsTo[
-CP Identifiable[CID], CID comparable,
-PP Identifiable[PID], PID comparable,
+	CP Identifiable[CID], CID comparable,
+	PP Identifiable[PID], PID comparable,
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP,    // on the child
+	relationFieldPtr func(CP) *PP, // on the child
 ) {
 	for _, child := range children.Map {
 		if parent, ok := parents.Map[*foreignKeyFieldPtr(child)]; ok {
