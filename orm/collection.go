@@ -143,10 +143,45 @@ func LinkBelongsTo[
 	relationFieldPtr func(CP) *PP, // on the child
 ) {
 	for _, child := range children.Map {
-		if parent, ok := parents.Map[*foreignKeyFieldPtr(child)]; ok {
+		fkPtr := foreignKeyFieldPtr(child)
+		if fkPtr == nil {
+			continue
+		}
+		fk := *fkPtr
+		if parent, ok := parents.Map[fk]; ok {
 			*relationFieldPtr(child) = parent
 		}
 	}
+}
+
+func LinkStrictlyBelongsTo[
+	CP Identifiable[CID], CID comparable, // Child
+	PP Identifiable[PID], PID comparable, // Parent
+](
+	children *ModelCollection[CP, CID],
+	parents *ModelCollection[PP, PID],
+	foreignKeyFieldPtr func(CP) *PID, // on the child
+	relationFieldPtr func(CP) *PP, // on the child
+) error {
+	for _, child := range children.Map {
+		fkPtr := foreignKeyFieldPtr(child)
+		if fkPtr == nil {
+			return fmt.Errorf(
+				"LinkStrictlyBelongsTo: nil foreign key for child ID %v",
+				child.GetID(),
+			)
+		}
+		fk := *fkPtr
+		parent, ok := parents.Map[fk]
+		if !ok {
+			return fmt.Errorf(
+				"LinkStrictlyBelongsTo: parent with ID %v not found for child ID %v",
+				fk, child.GetID(),
+			)
+		}
+		*relationFieldPtr(child) = parent
+	}
+	return nil
 }
 
 // LinkHasMany connects ParentCollection-ChildCollection where a Parent-HasMany-Children
