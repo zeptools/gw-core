@@ -71,6 +71,35 @@ func (c *ModelCollection[MP, ID]) ForEachOrdered(fn func(MP)) error {
 	return nil
 }
 
+func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, ID] {
+	// If ordered, keep the same order slice layout
+	if len(c.Order) > 0 {
+		filtered := &ModelCollection[MP, ID]{
+			Map:   make(map[ID]MP, len(c.Map)),
+			Order: make([]ID, 0, len(c.Order)),
+		}
+		for _, id := range c.Order {
+			item := c.Map[id]
+			if fn(item) {
+				filtered.Map[id] = item
+				filtered.Order = append(filtered.Order, id)
+			}
+		}
+		return filtered
+	}
+
+	// Unordered — iterate directly over the map
+	filtered := &ModelCollection[MP, ID]{
+		Map: make(map[ID]MP, len(c.Map)),
+	}
+	for id, item := range c.Map {
+		if fn(item) {
+			filtered.Map[id] = item
+		}
+	}
+	return filtered
+}
+
 func LinkBelongsTo[
 CP Identifiable[CID], CID comparable,
 PP Identifiable[PID], PID comparable,
