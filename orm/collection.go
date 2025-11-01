@@ -2,7 +2,6 @@ package orm
 
 import (
 	"fmt"
-	"log"
 )
 
 type ModelCollection[MP Identifiable[ID], ID comparable] struct {
@@ -179,7 +178,6 @@ PP Identifiable[PID], PID comparable, // Parent
 			)
 		}
 		fk := *fkPtr
-		log.Printf("[DEBUG] %v\n", fk)
 		parent, ok := parents.Map[fk]
 		if !ok {
 			return fmt.Errorf(
