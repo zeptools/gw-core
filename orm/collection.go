@@ -132,11 +132,7 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
-func Pluck[
-MP Identifiable[ID],
-ID comparable,
-V any,
-](
+func Pluck[MP Identifiable[ID], ID comparable, V any](
 	c *ModelCollection[MP, ID],
 	fieldPtr func(MP) *V,
 ) []V {
@@ -144,7 +140,7 @@ V any,
 	if len(c.Order) > 0 {
 		for _, id := range c.Order {
 			mp := c.Map[id]
-			if mp == nil {
+			if mp == nil { // pointer-typed nil?
 				continue
 			}
 			vp := fieldPtr(mp)
@@ -172,12 +168,7 @@ V any,
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 // Optional Version
-func LinkOptionalBelongsTo[
-CP Identifiable[CID], // Child Pointer
-CID comparable,       // Child ID
-PP Identifiable[PID], // Parent Pointer
-PID comparable,       // Parent ID
-](
+func LinkOptionalBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable[PID], PID comparable](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
@@ -198,12 +189,7 @@ PID comparable,       // Parent ID
 // LinkBelongsTo - Strict Version
 // ForeignKeyField is on the Child
 // RelationField is on the Child
-func LinkBelongsTo[
-CP Identifiable[CID], // Child Pointer
-CID comparable,       // Child ID
-PP Identifiable[PID], // Parent Pointer
-PID comparable,       // Parent ID
-](
+func LinkBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable[PID], PID comparable](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
@@ -233,12 +219,7 @@ PID comparable,       // Parent ID
 // LinkHasMany connects ParentCollection-ChildCollection where a Parent-HasMany-Children
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
-func LinkHasMany[
-PP Identifiable[PID], // Parent Pointer
-PID comparable,       // Parent ID
-CP Identifiable[CID], // Child Pointer
-CID comparable,       // Child
-](
+func LinkHasMany[PP Identifiable[PID], PID comparable, CP Identifiable[CID], CID comparable](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
