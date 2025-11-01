@@ -1,6 +1,7 @@
 package orm
 
 type Identifiable[ID comparable] interface {
+	comparable
 	GetID() ID
 }
 

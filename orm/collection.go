@@ -9,7 +9,10 @@ type ModelCollection[MP Identifiable[ID], ID comparable] struct {
 	Order []ID // optional: only populated if you care about iteration order
 }
 
-func NewModelCollectionUnordered[P Identifiable[ID], ID comparable](items []P) *ModelCollection[P, ID] {
+func NewModelCollectionUnordered[
+	P Identifiable[ID],
+	ID comparable,
+](items []P) *ModelCollection[P, ID] {
 	coll := &ModelCollection[P, ID]{
 		Map: make(map[ID]P, len(items)),
 	}
@@ -19,7 +22,10 @@ func NewModelCollectionUnordered[P Identifiable[ID], ID comparable](items []P) *
 	return coll
 }
 
-func NewModelCollectionOrdered[P Identifiable[ID], ID comparable](items []P) *ModelCollection[P, ID] {
+func NewModelCollectionOrdered[
+	P Identifiable[ID],
+	ID comparable,
+](items []P) *ModelCollection[P, ID] {
 	coll := &ModelCollection[P, ID]{
 		Map:   make(map[ID]P, len(items)),
 		Order: make([]ID, len(items)),
@@ -119,7 +125,6 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 		}
 		return filtered
 	}
-
 	// Unordered — iterate directly over the map
 	filtered := &ModelCollection[MP, ID]{
 		Map: make(map[ID]MP, len(c.Map)),
@@ -132,7 +137,11 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
-func Pluck[MP Identifiable[ID], ID comparable, V any](
+func Pluck[
+	MP Identifiable[ID],
+	ID comparable,
+	V any,
+](
 	c *ModelCollection[MP, ID],
 	fieldPtr func(MP) *V,
 ) []V {
@@ -140,7 +149,7 @@ func Pluck[MP Identifiable[ID], ID comparable, V any](
 	if len(c.Order) > 0 {
 		for _, id := range c.Order {
 			mp := c.Map[id]
-			if mp == nil { // pointer-typed nil?
+			if mp == nil {
 				continue
 			}
 			vp := fieldPtr(mp)
@@ -168,11 +177,16 @@ func Pluck[MP Identifiable[ID], ID comparable, V any](
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 // Optional Version
-func LinkOptionalBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable[PID], PID comparable](
+func LinkOptionalBelongsTo[
+	CP Identifiable[CID],
+	CID comparable,
+	PP Identifiable[PID],
+	PID comparable,
+](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP,    // on the child
+	relationFieldPtr func(CP) *PP, // on the child
 ) {
 	for _, child := range children.Map {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -189,11 +203,16 @@ func LinkOptionalBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable
 // LinkBelongsTo - Strict Version
 // ForeignKeyField is on the Child
 // RelationField is on the Child
-func LinkBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable[PID], PID comparable](
+func LinkBelongsTo[
+	CP Identifiable[CID],
+	CID comparable,
+	PP Identifiable[PID],
+	PID comparable,
+](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP,    // on the child
+	relationFieldPtr func(CP) *PP, // on the child
 ) error {
 	for _, child := range children.Map {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -219,11 +238,16 @@ func LinkBelongsTo[CP Identifiable[CID], CID comparable, PP Identifiable[PID], P
 // LinkHasMany connects ParentCollection-ChildCollection where a Parent-HasMany-Children
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
-func LinkHasMany[PP Identifiable[PID], PID comparable, CP Identifiable[CID], CID comparable](
+func LinkHasMany[
+	PP Identifiable[PID],
+	PID comparable,
+	CP Identifiable[CID],
+	CID comparable,
+](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(PP) *[]CP,  // on the parent, slice
+	relationFieldPtr func(PP) *[]CP, // on the parent, slice
 ) {
 	grouped := make(map[PID][]CP, len(parents.Map))
 	for _, child := range children.Map {
