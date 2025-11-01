@@ -132,13 +132,30 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
+func Pluck[
+MP Identifiable[ID],
+ID comparable,
+V any,
+](
+	c *ModelCollection[MP, ID],
+	fieldPtr func(MP) *V,
+) ([]V, error) {
+	sl := make([]V, 0, c.Len())
+	for _, item := range c.Map {
+		sl = append(sl, *fieldPtr(item))
+	}
+	return sl, nil
+}
+
 // LinkOptionalBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 // Optional Version
 func LinkOptionalBelongsTo[
-CP Identifiable[CID], CID comparable, // Child
-PP Identifiable[PID], PID comparable, // Parent
+CP Identifiable[CID], // Child Pointer
+CID comparable,       // Child ID
+PP Identifiable[PID], // Parent Pointer
+PID comparable,       // Parent ID
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
@@ -161,8 +178,10 @@ PP Identifiable[PID], PID comparable, // Parent
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 func LinkBelongsTo[
-CP Identifiable[CID], CID comparable, // Child
-PP Identifiable[PID], PID comparable, // Parent
+CP Identifiable[CID], // Child Pointer
+CID comparable,       // Child ID
+PP Identifiable[PID], // Parent Pointer
+PID comparable,       // Parent ID
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
@@ -194,8 +213,10 @@ PP Identifiable[PID], PID comparable, // Parent
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-PP Identifiable[PID], PID comparable, // Parent
-CP Identifiable[CID], CID comparable, // Child
+PP Identifiable[PID], // Parent Pointer
+PID comparable,       // Parent ID
+CP Identifiable[CID], // Child Pointer
+CID comparable,       // Child
 ](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
