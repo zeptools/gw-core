@@ -139,12 +139,33 @@ V any,
 ](
 	c *ModelCollection[MP, ID],
 	fieldPtr func(MP) *V,
-) ([]V, error) {
+) []V {
 	sl := make([]V, 0, c.Len())
-	for _, item := range c.Map {
-		sl = append(sl, *fieldPtr(item))
+	if len(c.Order) > 0 {
+		for _, id := range c.Order {
+			mp := c.Map[id]
+			if mp == nil {
+				continue
+			}
+			vp := fieldPtr(mp)
+			if vp == nil {
+				continue
+			}
+			sl = append(sl, *vp)
+		}
+		return sl
 	}
-	return sl, nil
+	for _, mp := range c.Map {
+		if mp == nil {
+			continue
+		}
+		vp := fieldPtr(mp)
+		if vp == nil {
+			continue
+		}
+		sl = append(sl, *vp)
+	}
+	return sl
 }
 
 // LinkOptionalBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
