@@ -170,6 +170,43 @@ V any,
 	return sl
 }
 
+func PluckMap[
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
+](
+	c *ModelCollection[MP, ID],
+	keyPtr func(MP) *K,
+	valPtr func(MP) *V,
+) map[K]V {
+	m := make(map[K]V, c.Len())
+	if len(c.Order) > 0 {
+		for _, id := range c.Order {
+			mp, ok := c.Map[id]
+			if !ok {
+				continue
+			}
+			kp := keyPtr(mp)
+			vp := valPtr(mp)
+			if kp == nil || vp == nil {
+				continue
+			}
+			m[*kp] = *vp
+		}
+		return m
+	}
+	for _, mp := range c.Map {
+		kp := keyPtr(mp)
+		vp := valPtr(mp)
+		if kp == nil || vp == nil {
+			continue
+		}
+		m[*kp] = *vp
+	}
+	return m
+}
+
 // LinkOptionalBelongsTo connects ChildCollection-ParentCollection where aChild-BelongsTo-aParent
 // ForeignKeyField is on the Child
 // RelationField is on the Child
