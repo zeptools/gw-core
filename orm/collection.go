@@ -93,18 +93,36 @@ func (c *ModelCollection[MP, ID]) Items() []MP {
 	return items
 }
 
+// ForEach calls fn for every model in the collection.
+// If the collection has an order, it respects that order.
 func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
-	for _, item := range c.Map {
-		fn(item)
+	if len(c.Order) > 0 {
+		for _, id := range c.Order {
+			if mp, ok := c.Map[id]; ok {
+				fn(mp)
+			}
+		}
+		return
+	}
+	for _, mp := range c.Map {
+		fn(mp)
 	}
 }
 
-func (c *ModelCollection[MP, ID]) ForEachOrdered(fn func(MP)) error {
+func (c *ModelCollection[MP, ID]) ForEachUnorderly(fn func(MP)) {
+	for _, mp := range c.Map {
+		fn(mp)
+	}
+}
+
+func (c *ModelCollection[MP, ID]) ForEachOrderly(fn func(MP)) error {
 	if len(c.Order) == 0 {
 		return fmt.Errorf("collection is unordered")
 	}
 	for _, id := range c.Order {
-		fn(c.Map[id])
+		if mp, ok := c.Map[id]; ok {
+			fn(mp)
+		}
 	}
 	return nil
 }
@@ -137,73 +155,87 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 	return filtered
 }
 
-func Pluck[
+// EnumerateToSlice iterates over every model in the collection and calls yield for each.
+// Every model contributes exactly one value. No skipping.
+// Conceptually equivalent to: [yield(m) for m in c].
+func EnumerateToSlice[
 MP Identifiable[ID],
 ID comparable,
 V any,
 ](
 	c *ModelCollection[MP, ID],
-	fieldPtr func(MP) *V,
+	yield func(MP) V,
 ) []V {
-	sl := make([]V, 0, c.Len())
-	if len(c.Order) > 0 {
-		for _, id := range c.Order {
-			mp, ok := c.Map[id]
-			if !ok {
-				continue
-			}
-			vp := fieldPtr(mp)
-			if vp == nil {
-				continue
-			}
-			sl = append(sl, *vp)
-		}
-		return sl
-	}
-	for _, mp := range c.Map {
-		vp := fieldPtr(mp)
-		if vp == nil {
-			continue
-		}
-		sl = append(sl, *vp)
-	}
+	sl := make([]V, 0, c.Len()) // new slice
+	c.ForEach(func(mp MP) {
+		// we don't mutate, but yield can. caller's responsibility
+		sl = append(sl, yield(mp))
+	})
 	return sl
 }
 
-func PluckMap[
+// EnumerateToMap iterates over every model in the collection and calls yield for each.
+// Every model contributes exactly one key–value pair. No skipping.
+// Conceptually equivalent to: {k: v for m in c}.
+func EnumerateToMap[
 MP Identifiable[ID],
 ID comparable,
 K comparable,
 V any,
 ](
 	c *ModelCollection[MP, ID],
-	keyPtr func(MP) *K,
-	valPtr func(MP) *V,
+	yield func(MP) (K, V),
 ) map[K]V {
-	m := make(map[K]V, c.Len())
-	if len(c.Order) > 0 {
-		for _, id := range c.Order {
-			mp, ok := c.Map[id]
-			if !ok {
-				continue
-			}
-			kp := keyPtr(mp)
-			vp := valPtr(mp)
-			if kp == nil || vp == nil {
-				continue
-			}
-			m[*kp] = *vp
+	m := make(map[K]V, c.Len()) // new map
+	c.ForEachUnorderly(func(mp MP) {
+		// we don't mutate, but yield can. caller's responsibility
+		k, v := yield(mp)
+		m[k] = v
+	})
+	return m
+}
+
+// CollectToSlice iterates over the collection and calls yield for each model.
+// If yield returns nil, the element is skipped (conditional yield).
+// Returns a slice of yielded values.
+// Equivalent to a list comprehension: [yield(m) for m in c if yield(m) != nil].
+func CollectToSlice[
+MP Identifiable[ID],
+ID comparable,
+V any,
+](
+	c *ModelCollection[MP, ID],
+	yield func(MP) *V,
+) []V {
+	sl := make([]V, 0, c.Len()) // new slice
+	c.ForEach(func(mp MP) {
+		// we don't mutate, but yield can. caller's responsibility
+		if v := yield(mp); v != nil {
+			sl = append(sl, *v)
 		}
-		return m
-	}
-	for _, mp := range c.Map {
-		kp := keyPtr(mp)
-		vp := valPtr(mp)
-		if kp == nil || vp == nil {
-			continue
+	})
+	return sl
+}
+
+// CollectToMap iterates over the collection and calls yield for each model.
+// If yield returns nil, the element is skipped (conditional yield).
+// The yielded key–value pair determines each map entry.
+func CollectToMap[
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
+](
+	c *ModelCollection[MP, ID],
+	yield func(MP) (*K, *V),
+) map[K]V {
+	m := make(map[K]V, c.Len()) // new map
+	c.ForEachUnorderly(func(mp MP) {
+		// we don't mutate, but yield can. caller's responsibility
+		if k, v := yield(mp); k != nil && v != nil {
+			m[*k] = *v
 		}
-		m[*kp] = *vp
-	}
+	})
 	return m
 }
 
