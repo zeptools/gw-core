@@ -170,3 +170,33 @@ ID comparable,
 	}
 	return coll, nil
 }
+
+// LoadBelongsTo - Load Parents from SQL DB and Link Child-BelongsTo-Parent
+// Returns the ParentCollection
+func LoadBelongsTo[
+CP orm.Identifiable[CID],
+CID comparable,
+P any, // Model struct
+PP ScannableIdentifiable[P, PID],
+PID comparable,
+](
+	ctx context.Context,
+	dbHnd DBHandle,
+	ucs *orm.ModelCollection[CP, CID],
+	sqlSelectBase string,
+	foreignKey func(c CP) PID,
+	relationFieldPtr func(c CP) *PP,
+	placeholdersGen func(int) string,
+) (*orm.ModelCollection[PP, PID], error) {
+	fKeysAsAny := orm.EnumerateToSlice(ucs, func(c CP) any { return foreignKey(c) })
+	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE id IN (%s)", placeholdersGen(len(fKeysAsAny)))
+	parents, err := QueryCollection[P, PP, PID](ctx, dbHnd, sqlStmt, fKeysAsAny...)
+	if err != nil {
+		return nil, err
+	}
+	err = orm.LinkBelongsTo[CP, CID, PP, PID](ucs, parents, foreignKey, relationFieldPtr)
+	if err != nil {
+		return nil, err
+	}
+	return parents, nil
+}
