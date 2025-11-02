@@ -85,7 +85,7 @@ func QueryMap[
 	DBHandle DBHandle,
 	rawSQLStmt string,
 	args ...any, // variadic
-) (map[ID]*M, error) { // Returns a Map of ID to Model-Pointers
+) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	rows, err := DBHandle.QueryRows(ctx, rawSQLStmt, args...)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func RowsToMap[
 	M any, // Model struct
 	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
 	ID comparable,
-](rows Rows) (map[ID]*M, error) { // Returns a Map of ID to Model-Pointers
+](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	idItemptrs := map[ID]*M{}
 	for rows.Next() {
 		var item M    // struct with zero values for the fields
@@ -162,8 +162,8 @@ func RowsToCollection[
 			return nil, fmt.Errorf("scan failed: %v", err)
 		}
 		id := p.GetID()
-		coll.Map[id] = p
-		coll.Order = append(coll.Order, id)
+		coll.ItemsMap[id] = p
+		coll.OrderedIDs = append(coll.OrderedIDs, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error during iterating rows: %v", err)
