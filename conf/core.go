@@ -53,8 +53,6 @@ type Core[B comparable] struct {
 	done                chan error
 
 	// ToDo: Refactor as fields of each sql db client
-	MainDBRawStore     *sqldb.RawStore            `json:"-"`
-	MainDBPlaceholder  func(...int) string        `json:"-"`
 	MainDBPlaceholders func(int, ...int) []string `json:"-"`
 }
 
@@ -236,7 +234,7 @@ func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 	// Main SQL DB Placeholder Gen Fns
 	c.MainDBPlaceholder = sqldb.PlaceholderGF(placeholderPrefix)
 	c.MainDBPlaceholders = sqldb.PlaceholdersGF(placeholderPrefix)
-	// Main SQL DB SQL RawStore
+	// Main SQL DB SQL RawSQLStore
 	c.PrepareMainDBRawStore()
 	// Preload SQL Models & Packages
 	if preload != nil {
@@ -269,6 +267,7 @@ func (c *Core[B]) PrepareSQLDBClients() error {
 	// Registering Supported Implementations
 	pgsql.Register()
 	mysql.Register()
+
 	// Prepare New Clients
 	for dbName, sqlDBConf := range c.SQLDBConfs {
 		dbClient, err := sqldb.New(sqlDBConf.Type, sqlDBConf)

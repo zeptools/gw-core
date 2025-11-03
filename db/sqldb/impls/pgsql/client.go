@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zeptools/gw-core/db/sqldb"
 )
-
-var rawStore = sqldb.NewRawStore()
 
 type Client struct {
 	Handle // [Embedded] for Promoted Methods
@@ -73,8 +72,32 @@ func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) RawSQLStore() *sqldb.RawStore {
+func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
 	return rawStore
+}
+
+func (c *Client) SinglePlaceholder(nth ...int) string {
+	if len(nth) == 0 {
+		// No-index Provided
+		return DefaultSinglePlaceholder
+	}
+	return fmt.Sprintf("%c%d", DefaultPlaceholderPrefix, nth[0])
+}
+
+func (c *Client) Placeholders(cnt int, start ...int) string {
+	placeholders := make([]string, cnt)
+	var startI int
+	if len(start) == 0 {
+		startI = 1
+	} else {
+		startI = start[0]
+	}
+	j := startI
+	for i := range placeholders {
+		placeholders[i] = fmt.Sprintf("%c%d", DefaultPlaceholderPrefix, j)
+		j++
+	}
+	return strings.Join(placeholders, ",")
 }
 
 func (c *Client) Open(ctx context.Context) error {

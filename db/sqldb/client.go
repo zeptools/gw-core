@@ -8,8 +8,9 @@ type Client interface {
 	DBHandle() Handle
 	Conf() *Conf
 	DSN() string
-	RawSQLStore() *RawStore
-
+	RawSQLStore() *RawSQLStore
+	SinglePlaceholder(nth ...int) string       // n'th Placeholder (Optional, Default = 1)
+	Placeholders(cnt int, start ...int) string // Count, start (Optional, Default = 1)
 	Init() error
 	Open(ctx context.Context) error
 	Ping(ctx context.Context) error

@@ -5,14 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/zeptools/gw-core/db/sqldb"
 
 	_ "github.com/go-sql-driver/mysql" // side-effect
 )
-
-var rawStore = sqldb.NewRawStore()
 
 type Client struct {
 	Handle // [Embedded] for Promoted Methods
@@ -72,8 +71,20 @@ func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) RawSQLStore() *sqldb.RawStore {
+func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
 	return rawStore
+}
+
+func (c *Client) SinglePlaceholder(_ ...int) string {
+	return DefaultSinglePlaceholder
+}
+
+func (c *Client) Placeholders(cnt int, _ ...int) string {
+	placeholders := make([]string, cnt)
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+	return strings.Join(placeholders, ",")
 }
 
 func (c *Client) Open(_ context.Context) error {

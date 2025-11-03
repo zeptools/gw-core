@@ -8,24 +8,24 @@ import (
 	"strings"
 )
 
-type RawStore struct {
+type RawSQLStore struct {
 	stmts map[string]string
 }
 
-func NewRawStore() *RawStore {
-	return &RawStore{stmts: make(map[string]string)}
+func NewRawStore() *RawSQLStore {
+	return &RawSQLStore{stmts: make(map[string]string)}
 }
 
-func (s *RawStore) Set(key string, rawStmt string) {
+func (s *RawSQLStore) Set(key string, rawStmt string) {
 	s.stmts[key] = rawStmt
 }
 
-func (s *RawStore) Get(key string) (string, bool) {
+func (s *RawSQLStore) Get(key string) (string, bool) {
 	stmt, exists := s.stmts[key]
 	return stmt, exists
 }
 
-func (s *RawStore) GetAll() map[string]string {
+func (s *RawSQLStore) GetAll() map[string]string {
 	return s.stmts
 }
 
@@ -52,7 +52,7 @@ func RegisterGroup(fs embed.FS, group string) {
 	})
 }
 
-func LoadRawStmtsToStore(store *RawStore, dbtype string, placeholderPrefix byte) error {
+func LoadRawStmtsToStore(store *RawSQLStore, dbtype string, placeholderPrefix byte) error {
 	groupCnt := 0
 	stmtCnt := 0
 	for _, groupFS := range rawStoreRegistry {
