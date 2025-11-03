@@ -5,10 +5,10 @@ import (
 )
 
 type Client interface {
-	GetHandle() Handle
-	GetConf() *Conf
-	GetDSN() string
-	GetRawSQLStore() *RawStore
+	DBHandle() Handle
+	Conf() *Conf
+	DSN() string
+	RawSQLStore() *RawStore
 
 	Init() error
 	Open(ctx context.Context) error

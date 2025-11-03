@@ -10,18 +10,19 @@ import (
 	"github.com/zeptools/gw-core/db/sqldb"
 )
 
+var rawStore = sqldb.NewRawStore()
+
 type Client struct {
-	Handle   // [Embedded] for Promoted Methods
-	Conf     *sqldb.Conf
-	RawStore *sqldb.RawStore
-	dsn      string
+	Handle // [Embedded] for Promoted Methods
+	conf   *sqldb.Conf
+	dsn    string
 }
 
 // Ensure pgsql.Client implements sqldb.Client interface
 var _ sqldb.Client = (*Client)(nil)
 
 func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
-	return &Client{Conf: conf}, nil
+	return &Client{conf: conf}, nil
 }
 
 func Register() {
@@ -30,19 +31,19 @@ func Register() {
 
 func (c *Client) Init() error {
 	// DSN
-	if c.Conf.DSN != "" {
-		c.dsn = c.Conf.DSN
+	if c.conf.DSN != "" {
+		c.dsn = c.conf.DSN
 	} else {
 		// NOTE: sslmode=disable is often used for local dev, adjust as needed.
 		// NOTE: PostgreSQL natively allows multiple statements in a single query string.
 		c.dsn = fmt.Sprintf(
 			"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=%s",
-			c.Conf.Host,
-			c.Conf.Port,
-			c.Conf.User,
-			c.Conf.PW,
-			c.Conf.DB,
-			c.Conf.TZ,
+			c.conf.Host,
+			c.conf.Port,
+			c.conf.User,
+			c.conf.PW,
+			c.conf.DB,
+			c.conf.TZ,
 		)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -60,20 +61,20 @@ func (c *Client) Init() error {
 	return nil
 }
 
-func (c *Client) GetHandle() sqldb.Handle {
+func (c *Client) DBHandle() sqldb.Handle {
 	return &Handle{Pool: c.Pool}
 }
 
-func (c *Client) GetConf() *sqldb.Conf {
-	return c.Conf
+func (c *Client) Conf() *sqldb.Conf {
+	return c.conf
 }
 
-func (c *Client) GetDSN() string {
+func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) GetRawSQLStore() *sqldb.RawStore {
-	return c.RawStore
+func (c *Client) RawSQLStore() *sqldb.RawStore {
+	return rawStore
 }
 
 func (c *Client) Open(ctx context.Context) error {
@@ -81,7 +82,7 @@ func (c *Client) Open(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse pgx config: %w", err)
 	}
-	// Pool tuning _ ToDo: get this values from Conf
+	// Pool tuning _ ToDo: get this values from conf
 	config.MaxConns = 10
 	config.MinConns = 2
 	config.MaxConnLifetime = 3 * time.Minute

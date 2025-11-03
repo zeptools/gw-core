@@ -12,18 +12,19 @@ import (
 	_ "github.com/go-sql-driver/mysql" // side-effect
 )
 
+var rawStore = sqldb.NewRawStore()
+
 type Client struct {
-	Handle   // [Embedded] for Promoted Methods
-	Conf     *sqldb.Conf
-	RawStore *sqldb.RawStore
-	dsn      string
+	Handle // [Embedded] for Promoted Methods
+	conf   *sqldb.Conf
+	dsn    string
 }
 
 // Ensure mysql.Client implements sqldb.Client interface
 var _ sqldb.Client = (*Client)(nil)
 
 func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
-	return &Client{Conf: conf}, nil
+	return &Client{conf: conf}, nil
 }
 
 func Register() {
@@ -31,17 +32,17 @@ func Register() {
 }
 
 func (c *Client) Init() error {
-	if c.Conf.DSN != "" {
-		c.dsn = c.Conf.DSN
+	if c.conf.DSN != "" {
+		c.dsn = c.conf.DSN
 	} else {
 		c.dsn = fmt.Sprintf(
 			"%s:%s@tcp(%s:%d)/%s?parseTime=true&loc=%s&sql_mode=ANSI_QUOTES&multiStatements=true",
-			c.Conf.User,
-			c.Conf.PW,
-			c.Conf.Host,
-			c.Conf.Port,
-			c.Conf.DB,
-			c.Conf.TZ,
+			c.conf.User,
+			c.conf.PW,
+			c.conf.Host,
+			c.conf.Port,
+			c.conf.DB,
+			c.conf.TZ,
 		)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -59,20 +60,20 @@ func (c *Client) Init() error {
 	return nil
 }
 
-func (c *Client) GetHandle() sqldb.Handle {
+func (c *Client) DBHandle() sqldb.Handle {
 	return &Handle{DB: c.DB}
 }
 
-func (c *Client) GetConf() *sqldb.Conf {
-	return c.Conf
+func (c *Client) Conf() *sqldb.Conf {
+	return c.conf
 }
 
-func (c *Client) GetDSN() string {
+func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) GetRawSQLStore() *sqldb.RawStore {
-	return c.RawStore
+func (c *Client) RawSQLStore() *sqldb.RawStore {
+	return rawStore
 }
 
 func (c *Client) Open(_ context.Context) error {
@@ -80,7 +81,7 @@ func (c *Client) Open(_ context.Context) error {
 	if c.DB, err = sql.Open("mysql", c.dsn); err != nil {
 		return err
 	}
-	// ToDo: get this values from Conf
+	// ToDo: get this values from conf
 	c.SetConnMaxLifetime(time.Minute * 3)
 	c.SetMaxOpenConns(10)
 	c.SetMaxIdleConns(10)

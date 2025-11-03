@@ -210,6 +210,7 @@ func (c *Core[B]) PrepareKVDBClient() error {
 	return nil
 }
 
+// PrepareSQLDatabases for SQL DB Clients & RawSQL Stores, etc
 func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 	// Load SQL Databases Config File
 	err := c.LoadSQLDBConfs()
@@ -298,7 +299,7 @@ func (c *Core[B]) ResourceCleanUp() {
 		}
 	}
 	for name, sqlDBClient := range c.SQLDBClients {
-		dbType := sqlDBClient.GetConf().Type
+		dbType := sqlDBClient.Conf().Type
 		log.Printf("[INFO][%s] Closing %q SQL DB client", dbType, name)
 		err := sqlDBClient.Close()
 		if err != nil {
