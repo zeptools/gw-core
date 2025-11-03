@@ -47,8 +47,8 @@ type Core[B comparable] struct {
 	HttpClient          *http.Client             `json:"-"` // for requests to external apis
 	KVDBConf            kvdb.Conf                `json:"-"` // LoadKVDBConf()
 	KVDBClient          kvdb.Client              `json:"-"` // PrepareKVDBClient()
-	SQLDBConfs          map[string]sqldb.Conf    `json:"-"` // LoadSQLDBConfs()
-	SQLDBClients        SQLDBClients             `json:"-"` // PrepareSQLDBClients()
+	SQLDBConfs          map[string]*sqldb.Conf   `json:"-"` // LoadSQLDBConfs()
+	SQLDBClients        map[string]sqldb.Client  `json:"-"` // PrepareSQLDBClients()
 	services            []svc.Service            // Services to Manage
 	done                chan error
 
@@ -217,11 +217,12 @@ func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 		return err
 	}
 
-	// Main SQL DB Client
+	// Prepare SQL DB Clients
 	if err = c.PrepareSQLDBClients(); err != nil {
 		return err
 	}
 
+	// ToDo: Refactor this as part of each client
 	// Main SQL DB Placeholder Prefix
 	mainSQLDBConf, ok := c.SQLDBConfs["main"]
 	if !ok {
@@ -253,29 +254,32 @@ func (c *Core[B]) LoadSQLDBConfs() error {
 	if err != nil {
 		return err
 	}
-	c.SQLDBConfs = make(map[string]sqldb.Conf)
+	c.SQLDBConfs = make(map[string]*sqldb.Conf)
 	if err = json.Unmarshal(confBytes, &c.SQLDBConfs); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Core[B]) PrepareSQLDBClients() error { // ToDO: refactor this. currently only main db
-	mainSQLDBConf, ok := c.SQLDBConfs["main"]
-	if !ok {
-		return errors.New("main SQL DB conf not found")
-	}
-	// Main SQL DB Client
-	switch mainSQLDBConf.Type {
-	case "mysql":
-		c.SQLDBClients.Main = &mysql.Client{Conf: &mainSQLDBConf}
-	case "pgsql":
-		c.SQLDBClients.Main = &pgsql.Client{Conf: &mainSQLDBConf}
-	default:
-		return errors.New("unsupported sql database Type")
-	}
-	if err := c.SQLDBClients.Main.Init(); err != nil {
-		return err
+// PrepareSQLDBClients - Build & Init SQL DB Clients
+// Use after LoadSQLDBConfs
+func (c *Core[B]) PrepareSQLDBClients() error {
+	c.SQLDBClients = make(map[string]sqldb.Client)
+	// Registering Supported Implementations
+	pgsql.Register()
+	mysql.Register()
+	// Prepare New Clients
+	for dbName, sqlDBConf := range c.SQLDBConfs {
+		dbClient, err := sqldb.New(sqlDBConf.Type, sqlDBConf)
+		if err != nil {
+			return err
+		}
+		if err = dbClient.Init(); err != nil {
+			return err
+		}
+		// ToDo: Raw SQL Store
+		// ToDo: Placeholder Generating Functions
+		c.SQLDBClients[dbName] = dbClient
 	}
 	return nil
 }
@@ -293,21 +297,18 @@ func (c *Core[B]) ResourceCleanUp() {
 			log.Println("[ERROR] Failed to close KV database client")
 		}
 	}
-	if c.SQLDBClients.Main != nil {
-		if err := c.SQLDBClients.Main.Close(); err != nil {
-			log.Println("[ERROR] Failed to close main SQL database client")
+	for name, sqlDBClient := range c.SQLDBClients {
+		dbType := sqlDBClient.GetConf().Type
+		log.Printf("[INFO][%s] Closing %q SQL DB client", dbType, name)
+		err := sqlDBClient.Close()
+		if err != nil {
+			log.Printf("[ERROR][%s] Failed to close %q SQL DB client", dbType, name)
+		} else {
+			log.Printf("[INFO][%s] %q SQL DB client closed", dbType, name)
 		}
 	}
 	//----
 	log.Println("[INFO] App Resource Cleanup Complete")
-}
-
-type SQLDBConfs struct {
-	Main sqldb.Conf `json:"main"`
-}
-
-type SQLDBClients struct {
-	Main sqldb.Client
 }
 
 type DebugOpts struct {

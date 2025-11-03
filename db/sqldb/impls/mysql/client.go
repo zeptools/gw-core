@@ -22,6 +22,14 @@ type Client struct {
 // Ensure mysql.Client implements sqldb.Client interface
 var _ sqldb.Client = (*Client)(nil)
 
+func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
+	return &Client{Conf: conf}, nil
+}
+
+func Register() {
+	sqldb.RegisterFactory("mysql", NewClient)
+}
+
 func (c *Client) Init() error {
 	if c.Conf.DSN != "" {
 		c.dsn = c.Conf.DSN

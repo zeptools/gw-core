@@ -20,6 +20,14 @@ type Client struct {
 // Ensure pgsql.Client implements sqldb.Client interface
 var _ sqldb.Client = (*Client)(nil)
 
+func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
+	return &Client{Conf: conf}, nil
+}
+
+func Register() {
+	sqldb.RegisterFactory("pgsql", NewClient)
+}
+
 func (c *Client) Init() error {
 	// DSN
 	if c.Conf.DSN != "" {
