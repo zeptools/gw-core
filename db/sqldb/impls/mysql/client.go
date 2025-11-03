@@ -8,24 +8,20 @@ import (
 	"time"
 
 	"github.com/zeptools/gw-core/db/sqldb"
+
 	_ "github.com/go-sql-driver/mysql" // side-effect
 )
 
 type Client struct {
-	//sqldb.Client // [Embedded Interface]
-
-	Conf *sqldb.Conf
-
-	// db fields are implementation details, not exported
-	db  *sql.DB
-	dsn string
+	Handle // [Embedded] for Promoted Methods
+	Conf   *sqldb.Conf
+	dsn    string
 }
 
 // Ensure mysql.Client implements sqldb.Client interface
 var _ sqldb.Client = (*Client)(nil)
 
 func (c *Client) Init() error {
-	var err error
 	if c.Conf.DSN != "" {
 		c.dsn = c.Conf.DSN
 	} else {
@@ -39,25 +35,51 @@ func (c *Client) Init() error {
 			c.Conf.TZ,
 		)
 	}
-	if c.db, err = sql.Open("mysql", c.dsn); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// Open
+	err := c.Open(ctx)
+	if err != nil {
 		return err
 	}
-	c.db.SetConnMaxLifetime(time.Minute * 3)
-	c.db.SetMaxOpenConns(10)
-	c.db.SetMaxIdleConns(10)
-	if err = c.db.Ping(); err != nil {
+	// Ping
+	if err = c.Ping(ctx); err != nil {
 		return err
 	}
 	log.Println("[INFO] mysql client initialized")
 	return nil
 }
 
+func (c *Client) GetHandle() sqldb.Handle {
+	return &Handle{DB: c.DB}
+}
+
+func (c *Client) GetConf() *sqldb.Conf {
+	return c.Conf
+}
+
+func (c *Client) GetDSN() string {
+	return c.dsn
+}
+
+func (c *Client) Open(_ context.Context) error {
+	var err error
+	if c.DB, err = sql.Open("mysql", c.dsn); err != nil {
+		return err
+	}
+	// ToDo: get this values from Conf
+	c.SetConnMaxLifetime(time.Minute * 3)
+	c.SetMaxOpenConns(10)
+	c.SetMaxIdleConns(10)
+	return nil
+}
+
 func (c *Client) Close() error {
-	if c.db == nil {
+	if c.DB == nil {
 		return nil
 	}
 	log.Println("[INFO] closing mysql client")
-	err := c.db.Close()
+	err := c.DB.Close()
 	if err != nil {
 		return err
 	}
@@ -65,12 +87,12 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) DBHandle() sqldb.DBHandle {
-	return &DBHandle{db: c.db}
+func (c *Client) Ping(ctx context.Context) error {
+	return c.PingContext(ctx)
 }
 
 func (c *Client) BeginTx(ctx context.Context) (sqldb.Tx, error) {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

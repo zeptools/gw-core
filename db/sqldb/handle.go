@@ -2,7 +2,7 @@ package sqldb
 
 import "context"
 
-type DBHandle interface {
+type Handle interface {
 	// Exec executes SQL statement like INSERT, UPDATE, DELETE.
 	Exec(ctx context.Context, query string, args ...any) (Result, error) // Executes General SQL Statement(s)
 

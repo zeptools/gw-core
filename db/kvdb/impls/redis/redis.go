@@ -13,7 +13,6 @@ import (
 )
 
 type Client struct {
-	//kvdb.Client // [Embedded Interface]
 	Conf *kvdb.Conf
 
 	// implementation details, not exported
@@ -40,8 +39,12 @@ func (c *Client) Close() error {
 	return c.internal.Close()
 }
 
-func (c *Client) DBHandle() any { // use with runtime type assertion
+func (c *Client) GetHandle() any { // use with runtime type assertion
 	return c.internal
+}
+
+func (c *Client) GetConf() *kvdb.Conf {
+	return c.Conf
 }
 
 //--- Group Ops ----

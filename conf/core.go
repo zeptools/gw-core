@@ -30,31 +30,33 @@ import (
 // Core - common config
 // B = BucketID Type _ e.g. string, int64, etc
 type Core[B comparable] struct {
-	AppName             string                     `json:"app_name"`
-	Listen              string                     `json:"listen"`     // HTTP Server Listen IP:PORT Address
-	Host                string                     `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
-	DebugOpts           DebugOpts                  `json:"debug_opts"` // Debug Options
-	AppRoot             string                     `json:"-"`          // Filled from compiled paths
-	RootCtx             context.Context            `json:"-"`          // Global Context with RootCancel
-	RootCancel          context.CancelFunc         `json:"-"`          // CancelFunc for RootCtx
-	UDSService          *uds.Service               `json:"-"`          // PrepareUDSService()
-	JobScheduler        *schedjobs.Scheduler       `json:"-"`          // PrepareJobScheduler()
-	WebService          *web.Service               `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[B]   `json:"-"` // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                  `json:"-"` // map[string]string
-	SessionLocks        *sync.Map                  `json:"-"` // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                  `json:"-"` // map[string]struct{}
-	StorageConf         storages.Conf              `json:"-"` // LoadStorageConf()
-	HttpClient          *http.Client               `json:"-"` // for requests to external apis
-	KVDBConf            kvdb.Conf                  `json:"-"` // LoadKVDBConf()
-	KVDBClient          kvdb.Client                `json:"-"` // PrepareKVDBClient()
-	SQLDBConfs          SQLDBConfs                 `json:"-"` // LoadSQLDBConfs()
-	SQLDBClients        SQLDBClients               `json:"-"` // PrepareSQLDBClients()
-	MainDBRawStore      *sqldb.RawStore            `json:"-"` // ToDo: rawstore for each sql db client
-	MainDBPlaceholder   func(...int) string        `json:"-"`
-	MainDBPlaceholders  func(int, ...int) []string `json:"-"`
-	services            []svc.Service              // Services to Manage
+	AppName             string                   `json:"app_name"`
+	Listen              string                   `json:"listen"`     // HTTP Server Listen IP:PORT Address
+	Host                string                   `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
+	DebugOpts           DebugOpts                `json:"debug_opts"` // Debug Options
+	AppRoot             string                   `json:"-"`          // Filled from compiled paths
+	RootCtx             context.Context          `json:"-"`          // Global Context with RootCancel
+	RootCancel          context.CancelFunc       `json:"-"`          // CancelFunc for RootCtx
+	UDSService          *uds.Service             `json:"-"`          // PrepareUDSService()
+	JobScheduler        *schedjobs.Scheduler     `json:"-"`          // PrepareJobScheduler()
+	WebService          *web.Service             `json:"-"`
+	ThrottleBucketStore *throttle.BucketStore[B] `json:"-"` // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                `json:"-"` // map[string]string
+	SessionLocks        *sync.Map                `json:"-"` // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                `json:"-"` // map[string]struct{}
+	StorageConf         storages.Conf            `json:"-"` // LoadStorageConf()
+	HttpClient          *http.Client             `json:"-"` // for requests to external apis
+	KVDBConf            kvdb.Conf                `json:"-"` // LoadKVDBConf()
+	KVDBClient          kvdb.Client              `json:"-"` // PrepareKVDBClient()
+	SQLDBConfs          SQLDBConfs               `json:"-"` // LoadSQLDBConfs()
+	SQLDBClients        SQLDBClients             `json:"-"` // PrepareSQLDBClients()
+	services            []svc.Service            // Services to Manage
 	done                chan error
+
+	// ToDo: Refactor as fields of each sql db client
+	MainDBRawStore     *sqldb.RawStore            `json:"-"`
+	MainDBPlaceholder  func(...int) string        `json:"-"`
+	MainDBPlaceholders func(int, ...int) []string `json:"-"`
 }
 
 // BaseInit - 1st step for initialization

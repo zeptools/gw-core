@@ -9,21 +9,21 @@ import (
 )
 
 func QueryItem[
-M any,          // Model struct
-P Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	P Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
-	DBHandle DBHandle,
+	DBClient Client,
 	rawSQLStmt string,
 	args ...any, // variadic
 ) (*M, error) { // Returns the Pointer to the Newly Created Item
-	row := DBHandle.QueryRow(ctx, rawSQLStmt, args...)
+	row := DBClient.QueryRow(ctx, rawSQLStmt, args...)
 	return RowToItem[M, P](row)
 }
 
 func RowToItem[
-M any,          // Model struct
-P Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	P Scannable[M], // *Model Implementing Scannable[M]
 ](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
 	var item M    // struct with zero values for the fields
 	p := P(&item) // p is *M, which satisfies targetFieldsProvider interface
@@ -35,8 +35,8 @@ P Scannable[M], // *Model Implementing Scannable[M]
 }
 
 func QueryItems[
-M any,          // Model struct
-P Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	P Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -56,8 +56,8 @@ P Scannable[M], // *Model Implementing Scannable[M]
 }
 
 func RowsToItems[
-M any,          // Model struct
-P Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	P Scannable[M], // *Model Implementing Scannable[M]
 ](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
 	var itemptrs []*M
 	for rows.Next() {
@@ -77,9 +77,9 @@ P Scannable[M], // *Model Implementing Scannable[M]
 
 // QueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func QueryMap[
-M any,                          // Model struct
-P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -100,9 +100,9 @@ ID comparable,
 
 // RowsToMap scan rows to a map[id]item
 func RowsToMap[
-M any,                          // Model struct
-P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	idItemptrs := map[ID]*M{}
 	for rows.Next() {
@@ -122,9 +122,9 @@ ID comparable,
 
 // QueryCollection queries items using rawSQLStmt and scan rows to a collection
 func QueryCollection[
-M any,                          // Model struct
-P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	DBHandle DBHandle,
@@ -145,9 +145,9 @@ ID comparable,
 
 // RowsToCollection scan rows to a collection
 func RowsToCollection[
-M any,                          // Model struct
-P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	rows Rows,
 ) (*orm.ModelCollection[P, ID], error) {
@@ -174,11 +174,11 @@ ID comparable,
 // LoadBelongsTo - Load Parents from SQL DB and Link Child-BelongsTo-Parent
 // Returns the ParentCollection
 func LoadBelongsTo[
-CP orm.Identifiable[CID],
-CID comparable,
-P any, // Model struct
-PP ScannableIdentifiable[P, PID],
-PID comparable,
+	CP orm.Identifiable[CID],
+	CID comparable,
+	P any, // Model struct
+	PP ScannableIdentifiable[P, PID],
+	PID comparable,
 ](
 	ctx context.Context,
 	dbHnd DBHandle,

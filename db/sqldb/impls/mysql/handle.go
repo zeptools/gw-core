@@ -9,17 +9,15 @@ import (
 	"github.com/zeptools/gw-core/db/sqldb"
 )
 
-type DBHandle struct {
-	// sqldb.DBHandle // [Interface]
-
-	db *sql.DB
+type Handle struct {
+	*sql.DB // [Embedded]
 }
 
-// Ensure mysql.DBHandle implements sqldb.DBHandle interface
-var _ sqldb.DBHandle = (*DBHandle)(nil)
+// Ensure mysql.Handle implements sqldb.Handle interface
+var _ sqldb.Handle = (*Handle)(nil)
 
-func (h *DBHandle) Exec(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
-	result, err := h.db.ExecContext(ctx, query, args...)
+func (h *Handle) Exec(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
+	result, err := h.DB.ExecContext(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
@@ -27,8 +25,8 @@ func (h *DBHandle) Exec(ctx context.Context, query string, args ...any) (sqldb.R
 	return &Result{result: result}, nil
 }
 
-func (h *DBHandle) QueryRows(ctx context.Context, query string, args ...any) (sqldb.Rows, error) {
-	rows, err := h.db.QueryContext(ctx, query, args...)
+func (h *Handle) QueryRows(ctx context.Context, query string, args ...any) (sqldb.Rows, error) {
+	rows, err := h.DB.QueryContext(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
@@ -36,29 +34,29 @@ func (h *DBHandle) QueryRows(ctx context.Context, query string, args ...any) (sq
 	return &Rows{rows: rows}, nil
 }
 
-func (h *DBHandle) QueryRow(ctx context.Context, query string, args ...any) sqldb.Row {
-	row := h.db.QueryRowContext(ctx, query, args...)
+func (h *Handle) QueryRow(ctx context.Context, query string, args ...any) sqldb.Row {
+	row := h.DB.QueryRowContext(ctx, query, args...)
 	return &Row{row: row}
 }
 
 // CopyFrom - params: table, columns, rows
-func (h *DBHandle) CopyFrom(_ context.Context, _ string, _ []string, _ [][]any) (int64, error) {
+func (h *Handle) CopyFrom(_ context.Context, _ string, _ []string, _ [][]any) (int64, error) {
 	// MySQL doesn't have native COPY
 	// ToDo: emulate batch insert
 	return 0, fmt.Errorf("method `CopyFrom` not supported for MySQL")
 }
 
 // Listen - param: channel
-func (h *DBHandle) Listen(_ context.Context, _ string) (<-chan sqldb.Notification, error) {
+func (h *Handle) Listen(_ context.Context, _ string) (<-chan sqldb.Notification, error) {
 	return nil, fmt.Errorf("method `Listen` not supported for MySQL")
 }
 
-func (h *DBHandle) InsertStmt(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
+func (h *Handle) InsertStmt(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
 	trimmed := strings.TrimSpace(query)
 	if !strings.HasPrefix(strings.ToUpper(trimmed), "INSERT") {
 		return nil, fmt.Errorf("InsertStmt must start with INSERT")
 	}
-	result, err := h.db.ExecContext(ctx, query, args...)
+	result, err := h.DB.ExecContext(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
@@ -66,8 +64,8 @@ func (h *DBHandle) InsertStmt(ctx context.Context, query string, args ...any) (s
 	return &Result{result: result}, nil
 }
 
-func (h *DBHandle) Prepare(ctx context.Context, query string) (sqldb.PreparedStmt, error) {
-	stmt, err := h.db.PrepareContext(ctx, query)
+func (h *Handle) Prepare(ctx context.Context, query string) (sqldb.PreparedStmt, error) {
+	stmt, err := h.DB.PrepareContext(ctx, query)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err

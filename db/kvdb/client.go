@@ -3,12 +3,13 @@ package kvdb
 import (
 	"context"
 	"time"
-
-	"github.com/zeptools/gw-core/db"
 )
 
 type Client interface {
-	db.Client[any] // Client[T] locked into Client[Any] -> DBHandle() any (Runtime Type Assertion with overhead)
+	Init() error
+	Close() error
+	GetHandle() any // generic handle. ToDo: kvdb.Handle
+	GetConf() *Conf
 
 	//---- Key Ops ----
 

@@ -12,14 +12,14 @@ import (
 	"github.com/zeptools/gw-core/db/sqldb"
 )
 
-type DBHandle struct {
-	pool *pgxpool.Pool
+type Handle struct {
+	*pgxpool.Pool // [Embedded]
 }
 
-var _ sqldb.DBHandle = (*DBHandle)(nil)
+var _ sqldb.Handle = (*Handle)(nil)
 
-func (h *DBHandle) Exec(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
-	tag, err := h.pool.Exec(ctx, query, args...)
+func (h *Handle) Exec(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
+	tag, err := h.Pool.Exec(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
@@ -27,33 +27,33 @@ func (h *DBHandle) Exec(ctx context.Context, query string, args ...any) (sqldb.R
 	return &Result{tag: tag}, nil
 }
 
-func (h *DBHandle) QueryRows(ctx context.Context, query string, args ...any) (sqldb.Rows, error) {
-	rows, err := h.pool.Query(ctx, query, args...)
+func (h *Handle) QueryRows(ctx context.Context, query string, args ...any) (sqldb.Rows, error) {
+	rows, err := h.Pool.Query(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
 	}
 	return &Rows{
-		conn:    nil, // pool manages connection, no need to release here
+		conn:    nil, // Pool manages connection, no need to release here
 		current: rows,
 		batch:   nil, // single query, no batch
 	}, nil
 }
 
-func (h *DBHandle) QueryRow(ctx context.Context, query string, args ...any) sqldb.Row {
-	row := h.pool.QueryRow(ctx, query, args...)
+func (h *Handle) QueryRow(ctx context.Context, query string, args ...any) sqldb.Row {
+	row := h.Pool.QueryRow(ctx, query, args...)
 	return &Row{row: row}
 }
 
-func (h *DBHandle) CopyFrom(ctx context.Context, table string, columns []string, rows [][]any) (int64, error) {
+func (h *Handle) CopyFrom(ctx context.Context, table string, columns []string, rows [][]any) (int64, error) {
 	src := pgx.CopyFromRows(rows)
-	count, err := h.pool.CopyFrom(ctx, pgx.Identifier{table}, columns, src)
+	count, err := h.Pool.CopyFrom(ctx, pgx.Identifier{table}, columns, src)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	return count, err
 }
 
-func (h *DBHandle) Listen(ctx context.Context, channel string) (<-chan sqldb.Notification, error) {
-	conn, err := h.pool.Acquire(ctx)
+func (h *Handle) Listen(ctx context.Context, channel string) (<-chan sqldb.Notification, error) {
+	conn, err := h.Pool.Acquire(ctx)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (h *DBHandle) Listen(ctx context.Context, channel string) (<-chan sqldb.Not
 	return notifyCh, nil
 }
 
-func (h *DBHandle) InsertStmt(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
+func (h *Handle) InsertStmt(ctx context.Context, query string, args ...any) (sqldb.Result, error) {
 	trimmed := strings.TrimSpace(query)
 	if !strings.HasPrefix(strings.ToUpper(trimmed), "INSERT") {
 		return nil, fmt.Errorf("InsertStmt must start with INSERT")
@@ -100,20 +100,20 @@ func (h *DBHandle) InsertStmt(ctx context.Context, query string, args ...any) (s
 	if !strings.Contains(strings.ToUpper(query), "RETURNING") {
 		query += " RETURNING id"
 		var id int64
-		err := h.pool.QueryRow(ctx, query, args...).Scan(&id)
+		err := h.Pool.QueryRow(ctx, query, args...).Scan(&id)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{lastInsertID: id}, nil
 	}
 
-	tag, err := h.pool.Exec(ctx, query, args...)
+	tag, err := h.Pool.Exec(ctx, query, args...)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	return &Result{tag: tag}, err
 }
 
-func (h *DBHandle) Prepare(ctx context.Context, query string) (sqldb.PreparedStmt, error) {
-	conn, err := h.pool.Acquire(ctx)
+func (h *Handle) Prepare(ctx context.Context, query string) (sqldb.PreparedStmt, error) {
+	conn, err := h.Pool.Acquire(ctx)
 	// NOTE: We can process a DBMS-specific error to produce a better abstracted error
 	if err != nil {
 		return nil, err
