@@ -182,18 +182,18 @@ PID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
-	ucs *orm.ModelCollection[CP, CID],
+	childColl *orm.ModelCollection[CP, CID],
 	sqlSelectBase string,
 	foreignKey func(c CP) PID,
 	relationFieldPtr func(c CP) *PP,
 ) (*orm.ModelCollection[PP, PID], error) {
-	fKeysAsAny := orm.EnumerateToSlice(ucs, func(c CP) any { return foreignKey(c) })
+	fKeysAsAny := orm.EnumerateToSlice(childColl, func(c CP) any { return foreignKey(c) })
 	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE id IN (%s)", dbClient.Placeholders(len(fKeysAsAny)))
 	parents, err := QueryCollection[P, PP, PID](ctx, dbClient, sqlStmt, fKeysAsAny...)
 	if err != nil {
 		return nil, err
 	}
-	err = orm.LinkBelongsTo[CP, CID, PP, PID](ucs, parents, foreignKey, relationFieldPtr)
+	err = orm.LinkBelongsTo[CP, CID, PP, PID](childColl, parents, foreignKey, relationFieldPtr)
 	if err != nil {
 		return nil, err
 	}
