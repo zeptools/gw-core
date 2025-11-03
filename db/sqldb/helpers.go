@@ -9,8 +9,8 @@ import (
 )
 
 func QueryItem[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -22,8 +22,8 @@ func QueryItem[
 }
 
 func RowToItem[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
 	var item M    // struct with zero values for the fields
 	p := P(&item) // p is *M, which satisfies targetFieldsProvider interface
@@ -35,8 +35,8 @@ func RowToItem[
 }
 
 func QueryItems[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -56,8 +56,8 @@ func QueryItems[
 }
 
 func RowsToItems[
-	M any, // Model struct
-	P Scannable[M], // *Model Implementing Scannable[M]
+M any,          // Model struct
+P Scannable[M], // *Model Implementing Scannable[M]
 ](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
 	var itemptrs []*M
 	for rows.Next() {
@@ -77,9 +77,9 @@ func RowsToItems[
 
 // QueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func QueryMap[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -100,9 +100,9 @@ func QueryMap[
 
 // RowsToMap scan rows to a map[id]item
 func RowsToMap[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	idItemptrs := map[ID]*M{}
 	for rows.Next() {
@@ -122,9 +122,9 @@ func RowsToMap[
 
 // QueryCollection queries items using rawSQLStmt and scan rows to a collection
 func QueryCollection[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -145,9 +145,9 @@ func QueryCollection[
 
 // RowsToCollection scan rows to a collection
 func RowsToCollection[
-	M any, // Model struct
-	P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                          // Model struct
+P ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	rows Rows,
 ) (*orm.ModelCollection[P, ID], error) {
@@ -174,11 +174,11 @@ func RowsToCollection[
 // LoadBelongsTo - Load Parents from SQL DB and Link Child-BelongsTo-Parent
 // Returns the ParentCollection
 func LoadBelongsTo[
-	CP orm.Identifiable[CID],
-	CID comparable,
-	P any, // Model struct
-	PP ScannableIdentifiable[P, PID],
-	PID comparable,
+CP orm.Identifiable[CID],
+CID comparable,
+P any, // Model struct
+PP ScannableIdentifiable[P, PID],
+PID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -186,10 +186,9 @@ func LoadBelongsTo[
 	sqlSelectBase string,
 	foreignKey func(c CP) PID,
 	relationFieldPtr func(c CP) *PP,
-	placeholdersGen func(int) string,
 ) (*orm.ModelCollection[PP, PID], error) {
 	fKeysAsAny := orm.EnumerateToSlice(ucs, func(c CP) any { return foreignKey(c) })
-	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE id IN (%s)", placeholdersGen(len(fKeysAsAny)))
+	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE id IN (%s)", dbClient.Placeholders(len(fKeysAsAny)))
 	parents, err := QueryCollection[P, PP, PID](ctx, dbClient, sqlStmt, fKeysAsAny...)
 	if err != nil {
 		return nil, err
