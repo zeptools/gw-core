@@ -24,10 +24,6 @@ func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
 	return &Client{conf: conf}, nil
 }
 
-func Register() {
-	sqldb.RegisterFactory("pgsql", NewClient)
-}
-
 func (c *Client) Init() error {
 	// DSN
 	if c.conf.DSN != "" {
@@ -72,10 +68,6 @@ func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
-	return rawStore
-}
-
 func (c *Client) SinglePlaceholder(nth ...int) string {
 	if len(nth) == 0 {
 		// No-index Provided
@@ -98,6 +90,10 @@ func (c *Client) Placeholders(cnt int, start ...int) string {
 		j++
 	}
 	return strings.Join(placeholders, ",")
+}
+
+func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
+	return rawStmtStore
 }
 
 func (c *Client) Open(ctx context.Context) error {

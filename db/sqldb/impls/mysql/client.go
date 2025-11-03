@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zeptools/gw-core/db/sqldb"
-
 	_ "github.com/go-sql-driver/mysql" // side-effect
+	"github.com/zeptools/gw-core/db/sqldb"
 )
 
 type Client struct {
@@ -24,10 +23,6 @@ var _ sqldb.Client = (*Client)(nil)
 
 func NewClient(conf *sqldb.Conf) (sqldb.Client, error) {
 	return &Client{conf: conf}, nil
-}
-
-func Register() {
-	sqldb.RegisterFactory("mysql", NewClient)
 }
 
 func (c *Client) Init() error {
@@ -71,10 +66,6 @@ func (c *Client) DSN() string {
 	return c.dsn
 }
 
-func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
-	return rawStore
-}
-
 func (c *Client) SinglePlaceholder(_ ...int) string {
 	return DefaultSinglePlaceholder
 }
@@ -85,6 +76,10 @@ func (c *Client) Placeholders(cnt int, _ ...int) string {
 		placeholders[i] = "?"
 	}
 	return strings.Join(placeholders, ",")
+}
+
+func (c *Client) RawSQLStore() *sqldb.RawSQLStore {
+	return rawStmtStore
 }
 
 func (c *Client) Open(_ context.Context) error {

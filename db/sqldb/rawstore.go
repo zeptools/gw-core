@@ -43,10 +43,10 @@ type GroupFS struct {
 	FS    embed.FS
 }
 
-var rawStoreRegistry []GroupFS
+var RawStoreRegistry []GroupFS
 
 func RegisterGroup(fs embed.FS, group string) {
-	rawStoreRegistry = append(rawStoreRegistry, GroupFS{
+	RawStoreRegistry = append(RawStoreRegistry, GroupFS{
 		FS:    fs,
 		Group: group,
 	})
@@ -55,7 +55,7 @@ func RegisterGroup(fs embed.FS, group string) {
 func LoadRawStmtsToStore(store *RawSQLStore, dbtype string, placeholderPrefix byte) error {
 	groupCnt := 0
 	stmtCnt := 0
-	for _, groupFS := range rawStoreRegistry {
+	for _, groupFS := range RawStoreRegistry {
 		files, err := groupFS.FS.ReadDir("sql")
 		if err != nil {
 			return fmt.Errorf("failed to read embedded `sql` dir. %w", err)
@@ -81,7 +81,7 @@ func LoadRawStmtsToStore(store *RawSQLStore, dbtype string, placeholderPrefix by
 				stmtCnt++
 			case "sql":
 				// Standard SQL
-				// with Placeholders: `?` (static) and `@` (dynamic)
+				// with Placeholders: `?` (static) and `??` (dynamic)
 				if _, exists := store.Get(groupedStmtKey); !exists {
 					// Convert static placeholders
 					if placeholderPrefix == '?' || placeholderPrefix == 0 {

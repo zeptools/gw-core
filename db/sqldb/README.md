@@ -16,7 +16,8 @@ Since MySQL uses `?` for placeholders, no conversion is required.
 `?` -> `:n` where n = 1, 2, 3, ...
 
 ## 2. Dynamic Placeholders
-A dynamic placeholder is a notation used to represent a variable number of placeholders. It uses a symbol `??`, which can be converted—via a conversion function—into forms like `?, ?, ..., ?` or `$k, $k+1, ..., $n`, depending on the DBMS.
+A dynamic placeholder is a notation used to represent a variable number of placeholders.
+It uses a symbol `??`, which can be converted—via a conversion function—into forms like `?, ?, ..., ?` or `$k, $k+1, ..., $n`, depending on the DBMS.
 
 
 ## Prepared Statements

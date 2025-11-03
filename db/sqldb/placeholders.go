@@ -68,7 +68,7 @@ func ReplaceStaticPlaceholders(sql string, prefix byte) string {
 	i := 0
 	for i < len(sql) {
 		if sql[i] == '?' {
-			// skip double '??'
+			// Do Not Touch Dynamic Placeholders '??'
 			if i+1 < len(sql) && sql[i+1] == '?' {
 				builder.WriteByte('?')
 				builder.WriteByte('?')

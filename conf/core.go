@@ -51,9 +51,6 @@ type Core[B comparable] struct {
 	SQLDBClients        map[string]sqldb.Client  `json:"-"` // PrepareSQLDBClients()
 	services            []svc.Service            // Services to Manage
 	done                chan error
-
-	// ToDo: Refactor as fields of each sql db client
-	MainDBPlaceholders func(int, ...int) []string `json:"-"`
 }
 
 // BaseInit - 1st step for initialization
@@ -208,45 +205,6 @@ func (c *Core[B]) PrepareKVDBClient() error {
 	return nil
 }
 
-// PrepareSQLDatabases for SQL DB Clients & RawSQL Stores, etc
-func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
-	// Load SQL Databases Config File
-	err := c.LoadSQLDBConfs()
-	if err != nil {
-		return err
-	}
-
-	// Prepare SQL DB Clients
-	if err = c.PrepareSQLDBClients(); err != nil {
-		return err
-	}
-
-	// ToDo: Refactor this as part of each client
-	// Main SQL DB Placeholder Prefix
-	mainSQLDBConf, ok := c.SQLDBConfs["main"]
-	if !ok {
-		return errors.New("main SQL DB conf not found")
-	}
-	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[mainSQLDBConf.Type]
-	if !ok {
-		return errors.New("unsupported database type: " + mainSQLDBConf.Type)
-	}
-	// Main SQL DB Placeholder Gen Fns
-	c.MainDBPlaceholder = sqldb.PlaceholderGF(placeholderPrefix)
-	c.MainDBPlaceholders = sqldb.PlaceholdersGF(placeholderPrefix)
-	// Main SQL DB SQL RawSQLStore
-	c.PrepareMainDBRawStore()
-	// Preload SQL Models & Packages
-	if preload != nil {
-		preload()
-	}
-	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, mainSQLDBConf.Type, placeholderPrefix)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *Core[B]) LoadSQLDBConfs() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
@@ -264,6 +222,7 @@ func (c *Core[B]) LoadSQLDBConfs() error {
 // Use after LoadSQLDBConfs
 func (c *Core[B]) PrepareSQLDBClients() error {
 	c.SQLDBClients = make(map[string]sqldb.Client)
+
 	// Registering Supported Implementations
 	pgsql.Register()
 	mysql.Register()
@@ -277,15 +236,48 @@ func (c *Core[B]) PrepareSQLDBClients() error {
 		if err = dbClient.Init(); err != nil {
 			return err
 		}
-		// ToDo: Raw SQL Store
-		// ToDo: Placeholder Generating Functions
 		c.SQLDBClients[dbName] = dbClient
 	}
 	return nil
 }
 
-func (c *Core[B]) PrepareMainDBRawStore() {
-	c.MainDBRawStore = sqldb.NewRawStore()
+// PrepareSQLDatabases for SQL DB Clients & RawSQL Stores, etc
+func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
+	// Load SQL Databases Config File
+	err := c.LoadSQLDBConfs()
+	if err != nil {
+		return err
+	}
+	DBTypesSet := make(map[string]struct{})
+	for _, conf := range c.SQLDBConfs {
+		DBTypesSet[conf.Type] = struct{}{}
+	}
+	if len(DBTypesSet) == 0 {
+		return nil
+	}
+
+	// Prepare SQL DB Clients
+	if err = c.PrepareSQLDBClients(); err != nil {
+		return err
+	}
+
+	// Load Raw Statements to Stores
+	if ensureImports != nil {
+		ensureImports()
+	}
+	if _, ok := DBTypesSet["mysql"]; ok {
+		err = mysql.LoadRawStmtsToStore()
+		if err != nil {
+			return err
+		}
+	}
+	if _, ok := DBTypesSet["pgsql"]; ok {
+		err = pgsql.LoadRawStmtsToStore()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Core[B]) ResourceCleanUp() {
