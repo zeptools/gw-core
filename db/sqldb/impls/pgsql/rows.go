@@ -1,9 +1,9 @@
 package pgsql
 
 import (
-	"github.com/zeptools/gw-core/db/sqldb"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zeptools/gw-core/db/sqldb"
 )
 
 type Rows struct {

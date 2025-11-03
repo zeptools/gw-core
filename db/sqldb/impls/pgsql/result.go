@@ -3,8 +3,8 @@ package pgsql
 import (
 	"fmt"
 
-	"github.com/zeptools/gw-core/db/sqldb"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/zeptools/gw-core/db/sqldb"
 )
 
 type Result struct {

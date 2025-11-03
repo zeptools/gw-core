@@ -11,9 +11,10 @@ import (
 )
 
 type Client struct {
-	Handle // [Embedded] for Promoted Methods
-	Conf   *sqldb.Conf
-	dsn    string
+	Handle   // [Embedded] for Promoted Methods
+	Conf     *sqldb.Conf
+	RawStore *sqldb.RawStore
+	dsn      string
 }
 
 // Ensure pgsql.Client implements sqldb.Client interface
@@ -61,6 +62,10 @@ func (c *Client) GetConf() *sqldb.Conf {
 
 func (c *Client) GetDSN() string {
 	return c.dsn
+}
+
+func (c *Client) GetRawSQLStore() *sqldb.RawStore {
+	return c.RawStore
 }
 
 func (c *Client) Open(ctx context.Context) error {

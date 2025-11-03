@@ -5,13 +5,17 @@ import (
 )
 
 type Client interface {
-	Init() error
-	Open(ctx context.Context) error
-	Close() error
 	GetHandle() Handle
-	Handle // Methods required for Handle are also required, so, promote it
 	GetConf() *Conf
 	GetDSN() string
+	GetRawSQLStore() *RawStore
+
+	Init() error
+	Open(ctx context.Context) error
 	Ping(ctx context.Context) error
+	Close() error
+
+	Handle // Handle Methods are also required, so, promote it
+
 	BeginTx(ctx context.Context) (Tx, error)
 }

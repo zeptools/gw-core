@@ -47,7 +47,7 @@ type Core[B comparable] struct {
 	HttpClient          *http.Client             `json:"-"` // for requests to external apis
 	KVDBConf            kvdb.Conf                `json:"-"` // LoadKVDBConf()
 	KVDBClient          kvdb.Client              `json:"-"` // PrepareKVDBClient()
-	SQLDBConfs          SQLDBConfs               `json:"-"` // LoadSQLDBConfs()
+	SQLDBConfs          map[string]sqldb.Conf    `json:"-"` // LoadSQLDBConfs()
 	SQLDBClients        SQLDBClients             `json:"-"` // PrepareSQLDBClients()
 	services            []svc.Service            // Services to Manage
 	done                chan error
@@ -223,9 +223,13 @@ func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 	}
 
 	// Main SQL DB Placeholder Prefix
-	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[c.SQLDBConfs.Main.Type]
+	mainSQLDBConf, ok := c.SQLDBConfs["main"]
 	if !ok {
-		return errors.New("unsupported database type: " + c.SQLDBConfs.Main.Type)
+		return errors.New("main SQL DB conf not found")
+	}
+	placeholderPrefix, ok := sqldb.PlaceholderPrefixForDBType[mainSQLDBConf.Type]
+	if !ok {
+		return errors.New("unsupported database type: " + mainSQLDBConf.Type)
 	}
 	// Main SQL DB Placeholder Gen Fns
 	c.MainDBPlaceholder = sqldb.PlaceholderGF(placeholderPrefix)
@@ -236,7 +240,7 @@ func (c *Core[B]) PrepareSQLDatabases(preload func()) error {
 	if preload != nil {
 		preload()
 	}
-	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, c.SQLDBConfs.Main.Type, placeholderPrefix)
+	err = sqldb.LoadRawStmtsToStore(c.MainDBRawStore, mainSQLDBConf.Type, placeholderPrefix)
 	if err != nil {
 		return err
 	}
@@ -249,26 +253,30 @@ func (c *Core[B]) LoadSQLDBConfs() error {
 	if err != nil {
 		return err
 	}
+	c.SQLDBConfs = make(map[string]sqldb.Conf)
 	if err = json.Unmarshal(confBytes, &c.SQLDBConfs); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Core[B]) PrepareSQLDBClients() error {
+func (c *Core[B]) PrepareSQLDBClients() error { // ToDO: refactor this. currently only main db
+	mainSQLDBConf, ok := c.SQLDBConfs["main"]
+	if !ok {
+		return errors.New("main SQL DB conf not found")
+	}
 	// Main SQL DB Client
-	switch c.SQLDBConfs.Main.Type {
+	switch mainSQLDBConf.Type {
 	case "mysql":
-		c.SQLDBClients.Main = &mysql.Client{Conf: &c.SQLDBConfs.Main}
+		c.SQLDBClients.Main = &mysql.Client{Conf: &mainSQLDBConf}
 	case "pgsql":
-		c.SQLDBClients.Main = &pgsql.Client{Conf: &c.SQLDBConfs.Main}
+		c.SQLDBClients.Main = &pgsql.Client{Conf: &mainSQLDBConf}
 	default:
 		return errors.New("unsupported sql database Type")
 	}
 	if err := c.SQLDBClients.Main.Init(); err != nil {
 		return err
 	}
-	// Additional SQL DB Clients
 	return nil
 }
 
