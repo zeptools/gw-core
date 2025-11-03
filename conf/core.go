@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zeptools/gw-core/db"
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/db/kvdb/impls/redis"
 	"github.com/zeptools/gw-core/db/sqldb"
@@ -280,8 +279,17 @@ func (c *Core[B]) PrepareMainDBRawStore() {
 func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
-	db.CloseClient("KVDBClient", c.KVDBClient)
-	db.CloseClient("Main SQLDBClient", c.SQLDBClients.Main)
+	// ToDo: factor out this
+	if c.KVDBClient != nil {
+		if err := c.KVDBClient.Close(); err != nil {
+			log.Println("[ERROR] Failed to close KV database client")
+		}
+	}
+	if c.SQLDBClients.Main != nil {
+		if err := c.SQLDBClients.Main.Close(); err != nil {
+			log.Println("[ERROR] Failed to close main SQL database client")
+		}
+	}
 	//----
 	log.Println("[INFO] App Resource Cleanup Complete")
 }
