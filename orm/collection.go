@@ -385,7 +385,7 @@ func LinkHasMany[
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
 	foreignKey func(CP) PID, // on the child
-	relationFieldPtr func(PP) **ModelCollection[CP, CID], // on the parent, slice
+	relationFieldPtr func(PP) **ModelCollection[CP, CID], // on the parent
 ) {
 	childCollGrpByPID := make(map[PID]*ModelCollection[CP, CID], parents.Len())
 	for _, child := range children.itemsMap {
