@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"encoding/json/v2"
 	"fmt"
 )
 
@@ -10,8 +11,8 @@ type ModelCollection[MP Identifiable[ID], ID comparable] struct {
 }
 
 func NewModelCollectionUnordered[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ](items []P) *ModelCollection[P, ID] {
 	coll := &ModelCollection[P, ID]{
 		ItemsMap: make(map[ID]P, len(items)),
@@ -23,8 +24,8 @@ func NewModelCollectionUnordered[
 }
 
 func NewModelCollectionOrdered[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ](items []P) *ModelCollection[P, ID] {
 	coll := &ModelCollection[P, ID]{
 		ItemsMap:   make(map[ID]P, len(items)),
@@ -93,6 +94,13 @@ func (c *ModelCollection[MP, ID]) Items() []MP {
 	return items
 }
 
+func (c *ModelCollection[MP, ID]) MarshalJSON() ([]byte, error) {
+	if c == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(c.Items())
+}
+
 // ForEach calls fn for every model in the collection.
 // If the collection has an order, it respects that order.
 func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
@@ -159,9 +167,9 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 // Every model contributes exactly one value. No skipping.
 // Conceptually equivalent to: [yield(m) for m in c].
 func EnumerateToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
 	c *ModelCollection[MP, ID],
 	yield func(MP) V,
@@ -178,10 +186,10 @@ func EnumerateToSlice[
 // Every model contributes exactly one key–value pair. No skipping.
 // Conceptually equivalent to: {k: v for m in c}.
 func EnumerateToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
 	c *ModelCollection[MP, ID],
 	yield func(MP) (K, V),
@@ -200,9 +208,9 @@ func EnumerateToMap[
 // Returns a slice of yielded values.
 // Equivalent to a list comprehension: [yield(m) for m in c if yield(m) != nil].
 func CollectToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
 	c *ModelCollection[MP, ID],
 	yield func(MP) *V,
@@ -221,10 +229,10 @@ func CollectToSlice[
 // If yield returns nil, the element is skipped (conditional yield).
 // The yielded key–value pair determines each map entry.
 func CollectToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
 	c *ModelCollection[MP, ID],
 	yield func(MP) (*K, *V),
@@ -244,15 +252,15 @@ func CollectToMap[
 // RelationField is on the Child
 // Optional Version
 func LinkOptionalBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) {
 	for _, child := range children.ItemsMap {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -270,14 +278,14 @@ func LinkOptionalBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 func LinkBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
 	children *ModelCollection[CP, CID],
 	parents *ModelCollection[PP, PID],
-	foreignKey func(CP) PID, // on the child
+	foreignKey func(CP) PID,       // on the child
 	relationFieldPtr func(CP) *PP, // on the child
 ) error {
 	for _, child := range children.ItemsMap {
@@ -298,14 +306,14 @@ func LinkBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-	PP Identifiable[PID],
-	PID comparable,
-	CP Identifiable[CID],
-	CID comparable,
+PP Identifiable[PID],
+PID comparable,
+CP Identifiable[CID],
+CID comparable,
 ](
 	parents *ModelCollection[PP, PID],
 	children *ModelCollection[CP, CID],
-	foreignKey func(CP) PID, // on the child
+	foreignKey func(CP) PID,         // on the child
 	relationFieldPtr func(PP) *[]CP, // on the parent, slice
 ) {
 	grouped := make(map[PID][]CP, len(parents.ItemsMap))

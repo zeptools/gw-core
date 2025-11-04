@@ -7,7 +7,7 @@ type targetFieldsProvider interface {
 }
 
 type Scannable[T any] interface {
-	~*T                  // any pointer to T, including aliases
+	~*T                  // Type Constraint: Underlying Type(~) = *T
 	targetFieldsProvider // must implement targetFieldsProvider
 }
 
