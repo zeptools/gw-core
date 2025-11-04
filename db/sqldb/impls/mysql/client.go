@@ -70,6 +70,8 @@ func (c *Client) SinglePlaceholder(_ ...int) string {
 	return DefaultSinglePlaceholder
 }
 
+// Placeholders generates multiple placeholders (# = `cnt`)
+// cnt > 0
 func (c *Client) Placeholders(cnt int, _ ...int) string {
 	placeholders := make([]string, cnt)
 	for i := range placeholders {
