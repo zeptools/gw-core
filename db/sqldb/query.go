@@ -9,8 +9,8 @@ import (
 )
 
 func QueryItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -22,8 +22,8 @@ func QueryItem[
 }
 
 func RowToItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
 	var item M     // struct with zero values for the fields
 	p := MP(&item) // p is *M, which satisfies targetFieldsProvider interface
@@ -35,8 +35,8 @@ func RowToItem[
 }
 
 func QueryItems[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -56,8 +56,8 @@ func QueryItems[
 }
 
 func RowsToItems[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
 	var itemptrs []*M
 	for rows.Next() {
@@ -77,9 +77,9 @@ func RowsToItems[
 
 // QueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func QueryMap[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -100,9 +100,9 @@ func QueryMap[
 
 // RowsToMap scan rows to a map[id]item
 func RowsToMap[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	idItemptrs := map[ID]*M{}
 	for rows.Next() {
@@ -122,9 +122,9 @@ func RowsToMap[
 
 // QueryCollection queries items using rawSQLStmt and scan rows to a collection
 func QueryCollection[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -145,9 +145,9 @@ func QueryCollection[
 
 // RowsToCollection scan rows to a collection
 func RowsToCollection[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	rows Rows,
 ) (*orm.ModelCollection[MP, ID], error) {
@@ -170,11 +170,11 @@ func RowsToCollection[
 // LoadBelongsTo - Load Parents on Children from SQL DB and Link Child-BelongsTo-Parent Relation
 // Returns the Parents
 func LoadBelongsTo[
-	CP orm.Identifiable[CID],
-	CID comparable,
-	P any, // Model struct
-	PP ScannableIdentifiable[P, PID],
-	PID comparable,
+CP orm.Identifiable[CID],
+CID comparable,
+P any, // Model struct
+PP ScannableIdentifiable[P, PID],
+PID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -197,24 +197,24 @@ func LoadBelongsTo[
 }
 
 func LoadHasMany[
-	PP orm.Identifiable[PID],
-	PID comparable,
-	C any, // Model struct
-	CP ScannableIdentifiable[C, CID],
-	CID comparable,
+PP orm.Identifiable[PID],
+PID comparable,
+C any, // Model struct
+CP ScannableIdentifiable[C, CID],
+CID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
 	parents *orm.ModelCollection[PP, PID],
 	sqlSelectBase string,
-	foreignKeyColumn Column, // on the child
-	foreignKey func(CP) PID, // on the child
+	foreignKeyColumn Column,                                  // on the child
+	foreignKey func(CP) PID,                                  // on the child
 	relationFieldPtr func(PP) **orm.ModelCollection[CP, CID], // on the parent
 ) (*orm.ModelCollection[CP, CID], error) {
 	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", foreignKeyColumn.Name(),
 		dbClient.Placeholders(parents.Len(), 2))
-	ucpIDsAsAny := parents.IDsAsAny()
-	children, err := QueryCollection[C, CP, CID](ctx, dbClient, sqlStmt, ucpIDsAsAny...)
+	parentIDsAsAny := parents.IDsAsAny()
+	children, err := QueryCollection[C, CP, CID](ctx, dbClient, sqlStmt, parentIDsAsAny...)
 	if err != nil {
 		return nil, err
 	}
