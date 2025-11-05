@@ -5,8 +5,8 @@ type Identifiable[ID comparable] interface {
 }
 
 func ModelPtrsToIDMap[
-MP Identifiable[ID], // *Model struct
-ID comparable,
+	MP Identifiable[ID], // *Model struct
+	ID comparable,
 ](itemptrs []MP) map[ID]MP {
 	idItemptrs := make(map[ID]MP, len(itemptrs))
 	for _, p := range itemptrs {
