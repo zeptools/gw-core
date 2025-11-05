@@ -8,7 +8,6 @@ import (
 type ModelCollection[MP Identifiable[ID], ID comparable] struct {
 	itemsMap   map[ID]MP
 	orderedIDs []ID // optional (default = nil). only populated if you care about iteration order
-	DebugData  any  `json:"debug-data,omitempty"`
 }
 
 func NewEmptyOrderedModelCollection[
