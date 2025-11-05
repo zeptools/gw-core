@@ -4,7 +4,7 @@ import "encoding/json/v2"
 
 type Wrapped[T any] struct {
 	Data      T
-	DebugData any `json:"debug_data,omitempty"`
+	DebugData any
 }
 
 func Wrap[T any](data T) *Wrapped[T] {
