@@ -5,35 +5,35 @@ import (
 	"fmt"
 )
 
-type ModelCollection[MP Identifiable[ID], ID comparable] struct {
+type Collection[MP Identifiable[ID], ID comparable] struct {
 	itemsMap   map[ID]MP
 	orderedIDs []ID // optional (default = nil). only populated if you care about iteration order
 }
 
-func NewEmptyOrderedModelCollection[
-	P Identifiable[ID],
-	ID comparable,
-]() *ModelCollection[P, ID] {
-	return &ModelCollection[P, ID]{
+func NewEmptyOrderedCollection[
+P Identifiable[ID],
+ID comparable,
+]() *Collection[P, ID] {
+	return &Collection[P, ID]{
 		itemsMap:   make(map[ID]P),
 		orderedIDs: make([]ID, 0),
 	}
 }
 
-func NewEmptyUnorderedModelCollection[
-	P Identifiable[ID],
-	ID comparable,
-]() *ModelCollection[P, ID] {
-	return &ModelCollection[P, ID]{
+func NewEmptyUnorderedCollection[
+P Identifiable[ID],
+ID comparable,
+]() *Collection[P, ID] {
+	return &Collection[P, ID]{
 		itemsMap: make(map[ID]P),
 	}
 }
 
-func NewUnorderedModelCollection[
-	P Identifiable[ID],
-	ID comparable,
-](items []P) *ModelCollection[P, ID] {
-	coll := &ModelCollection[P, ID]{
+func NewUnorderedCollection[
+P Identifiable[ID],
+ID comparable,
+](items []P) *Collection[P, ID] {
+	coll := &Collection[P, ID]{
 		itemsMap: make(map[ID]P, len(items)),
 	}
 	for _, item := range items {
@@ -42,11 +42,11 @@ func NewUnorderedModelCollection[
 	return coll
 }
 
-func NewOrderedModelCollection[
-	P Identifiable[ID],
-	ID comparable,
-](items []P) *ModelCollection[P, ID] {
-	coll := &ModelCollection[P, ID]{
+func NewOrderedCollection[
+P Identifiable[ID],
+ID comparable,
+](items []P) *Collection[P, ID] {
+	coll := &Collection[P, ID]{
 		itemsMap:   make(map[ID]P, len(items)),
 		orderedIDs: make([]ID, len(items)),
 	}
@@ -58,21 +58,21 @@ func NewOrderedModelCollection[
 	return coll
 }
 
-func (c *ModelCollection[MP, ID]) Len() int {
+func (c *Collection[MP, ID]) Len() int {
 	return len(c.itemsMap)
 }
 
-func (c *ModelCollection[MP, ID]) Has(id ID) bool {
+func (c *Collection[MP, ID]) Has(id ID) bool {
 	_, ok := c.itemsMap[id]
 	return ok
 }
 
-func (c *ModelCollection[MP, ID]) Find(id ID) (MP, bool) {
+func (c *Collection[MP, ID]) Find(id ID) (MP, bool) {
 	p, ok := c.itemsMap[id]
 	return p, ok
 }
 
-func (c *ModelCollection[MP, ID]) Add(item MP) {
+func (c *Collection[MP, ID]) Add(item MP) {
 	id := item.GetID()
 	_, already := c.itemsMap[id]
 	c.itemsMap[id] = item
@@ -82,7 +82,7 @@ func (c *ModelCollection[MP, ID]) Add(item MP) {
 	}
 }
 
-func (c *ModelCollection[MP, ID]) IDs() []ID {
+func (c *Collection[MP, ID]) IDs() []ID {
 	if c.orderedIDs != nil {
 		return append([]ID(nil), c.orderedIDs...) // preserve original order
 	}
@@ -93,7 +93,7 @@ func (c *ModelCollection[MP, ID]) IDs() []ID {
 	return ids
 }
 
-func (c *ModelCollection[MP, ID]) IDsAsAny() []any {
+func (c *Collection[MP, ID]) IDsAsAny() []any {
 	if len(c.orderedIDs) > 0 {
 		ids := make([]any, len(c.orderedIDs))
 		for i, id := range c.orderedIDs {
@@ -108,7 +108,7 @@ func (c *ModelCollection[MP, ID]) IDsAsAny() []any {
 	return ids
 }
 
-func (c *ModelCollection[MP, ID]) Items() []MP {
+func (c *Collection[MP, ID]) Items() []MP {
 	if len(c.orderedIDs) > 0 {
 		items := make([]MP, 0, len(c.orderedIDs))
 		for _, id := range c.orderedIDs {
@@ -123,7 +123,7 @@ func (c *ModelCollection[MP, ID]) Items() []MP {
 	return items
 }
 
-func (c *ModelCollection[MP, ID]) MarshalJSON() ([]byte, error) {
+func (c *Collection[MP, ID]) MarshalJSON() ([]byte, error) {
 	if c == nil {
 		return []byte("null"), nil
 	}
@@ -132,7 +132,7 @@ func (c *ModelCollection[MP, ID]) MarshalJSON() ([]byte, error) {
 
 // ForEach calls fn for every model in the collection.
 // If the collection has an order, it respects that order.
-func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
+func (c *Collection[MP, ID]) ForEach(fn func(MP)) {
 	if len(c.orderedIDs) > 0 {
 		for _, id := range c.orderedIDs {
 			if mp, ok := c.itemsMap[id]; ok {
@@ -146,13 +146,13 @@ func (c *ModelCollection[MP, ID]) ForEach(fn func(MP)) {
 	}
 }
 
-func (c *ModelCollection[MP, ID]) ForEachUnorderly(fn func(MP)) {
+func (c *Collection[MP, ID]) ForEachUnorderly(fn func(MP)) {
 	for _, mp := range c.itemsMap {
 		fn(mp)
 	}
 }
 
-func (c *ModelCollection[MP, ID]) ForEachOrderly(fn func(MP)) error {
+func (c *Collection[MP, ID]) ForEachOrderly(fn func(MP)) error {
 	if len(c.orderedIDs) == 0 {
 		return fmt.Errorf("collection is unordered")
 	}
@@ -164,10 +164,10 @@ func (c *ModelCollection[MP, ID]) ForEachOrderly(fn func(MP)) error {
 	return nil
 }
 
-func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, ID] {
+func (c *Collection[MP, ID]) Filter(fn func(MP) bool) *Collection[MP, ID] {
 	// If ordered, keep the same order slice layout
 	if len(c.orderedIDs) > 0 {
-		filtered := &ModelCollection[MP, ID]{
+		filtered := &Collection[MP, ID]{
 			itemsMap:   make(map[ID]MP, len(c.itemsMap)),
 			orderedIDs: make([]ID, 0, len(c.orderedIDs)),
 		}
@@ -181,7 +181,7 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 		return filtered
 	}
 	// Unordered — iterate directly over the map
-	filtered := &ModelCollection[MP, ID]{
+	filtered := &Collection[MP, ID]{
 		itemsMap: make(map[ID]MP, len(c.itemsMap)),
 	}
 	for id, item := range c.itemsMap {
@@ -196,11 +196,11 @@ func (c *ModelCollection[MP, ID]) Filter(fn func(MP) bool) *ModelCollection[MP, 
 // Every model contributes exactly one value. No skipping.
 // Conceptually equivalent to: [yield(m) for m in c].
 func EnumerateToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
-	c *ModelCollection[MP, ID],
+	c *Collection[MP, ID],
 	yield func(MP) V,
 ) []V {
 	sl := make([]V, 0, c.Len()) // new slice
@@ -215,12 +215,12 @@ func EnumerateToSlice[
 // Every model contributes exactly one key–value pair. No skipping.
 // Conceptually equivalent to: {k: v for m in c}.
 func EnumerateToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
-	c *ModelCollection[MP, ID],
+	c *Collection[MP, ID],
 	yield func(MP) (K, V),
 ) map[K]V {
 	m := make(map[K]V, c.Len()) // new map
@@ -237,11 +237,11 @@ func EnumerateToMap[
 // Returns a slice of yielded values.
 // Equivalent to a list comprehension: [yield(m) for m in c if yield(m) != nil].
 func CollectToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
-	c *ModelCollection[MP, ID],
+	c *Collection[MP, ID],
 	yield func(MP) *V,
 ) []V {
 	sl := make([]V, 0, c.Len()) // new slice
@@ -258,12 +258,12 @@ func CollectToSlice[
 // If yield returns nil, the element is skipped (conditional yield).
 // The yielded key–value pair determines each map entry.
 func CollectToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
-	c *ModelCollection[MP, ID],
+	c *Collection[MP, ID],
 	yield func(MP) (*K, *V),
 ) map[K]V {
 	m := make(map[K]V, c.Len()) // new map
@@ -277,11 +277,11 @@ func CollectToMap[
 }
 
 func CollectUniqueToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V comparable,
+MP Identifiable[ID],
+ID comparable,
+V comparable,
 ](
-	c *ModelCollection[MP, ID],
+	c *Collection[MP, ID],
 	yield func(MP) *V,
 ) []V {
 	sl := make([]V, 0, c.Len())
@@ -323,15 +323,15 @@ func CollectUniqueToSlice[
 // RelationField is on the Child
 // Optional Version
 func LinkOptionalBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
-	children *ModelCollection[CP, CID],
-	parents *ModelCollection[PP, PID],
+	children *Collection[CP, CID],
+	parents *Collection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) {
 	for _, child := range children.itemsMap {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -349,14 +349,14 @@ func LinkOptionalBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 func LinkBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
-	children *ModelCollection[CP, CID],
-	parents *ModelCollection[PP, PID],
-	foreignKey func(CP) PID, // on the child
+	children *Collection[CP, CID],
+	parents *Collection[PP, PID],
+	foreignKey func(CP) PID,       // on the child
 	relationFieldPtr func(CP) *PP, // on the child
 ) error {
 	for _, child := range children.itemsMap {
@@ -377,22 +377,22 @@ func LinkBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-	PP Identifiable[PID],
-	PID comparable,
-	CP Identifiable[CID],
-	CID comparable,
+PP Identifiable[PID],
+PID comparable,
+CP Identifiable[CID],
+CID comparable,
 ](
-	parents *ModelCollection[PP, PID],
-	children *ModelCollection[CP, CID],
-	foreignKey func(CP) PID, // on the child
-	relationFieldPtr func(PP) **ModelCollection[CP, CID], // on the parent
+	parents *Collection[PP, PID],
+	children *Collection[CP, CID],
+	foreignKey func(CP) PID,                         // on the child
+	relationFieldPtr func(PP) **Collection[CP, CID], // on the parent
 ) {
-	childCollGrpByPID := make(map[PID]*ModelCollection[CP, CID], parents.Len())
+	childCollGrpByPID := make(map[PID]*Collection[CP, CID], parents.Len())
 	for _, child := range children.itemsMap {
 		pid := foreignKey(child) // child's FK to parent id
 		childColl, ok := childCollGrpByPID[pid]
 		if !ok {
-			childColl = NewEmptyOrderedModelCollection[CP, CID]()
+			childColl = NewEmptyOrderedCollection[CP, CID]()
 			childCollGrpByPID[pid] = childColl
 		}
 		childColl.Add(child)
@@ -401,7 +401,7 @@ func LinkHasMany[
 		if childColl, ok := childCollGrpByPID[pid]; ok {
 			*relationFieldPtr(parent) = childColl
 		} else {
-			*relationFieldPtr(parent) = NewEmptyOrderedModelCollection[CP, CID]()
+			*relationFieldPtr(parent) = NewEmptyOrderedCollection[CP, CID]()
 		}
 	}
 }

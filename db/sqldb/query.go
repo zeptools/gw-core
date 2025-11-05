@@ -9,8 +9,8 @@ import (
 )
 
 func QueryItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -22,8 +22,8 @@ func QueryItem[
 }
 
 func RowToItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
 	var item M     // struct with zero values for the fields
 	p := MP(&item) // p is *M, which satisfies targetFieldsProvider interface
@@ -35,8 +35,8 @@ func RowToItem[
 }
 
 func QueryItems[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -56,8 +56,8 @@ func QueryItems[
 }
 
 func RowsToItems[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
 	var itemptrs []*M
 	for rows.Next() {
@@ -77,9 +77,9 @@ func RowsToItems[
 
 // QueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func QueryMap[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -100,9 +100,9 @@ func QueryMap[
 
 // RowsToMap scan rows to a map[id]item
 func RowsToMap[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
 	idItemptrs := map[ID]*M{}
 	for rows.Next() {
@@ -122,15 +122,15 @@ func RowsToMap[
 
 // QueryCollection queries items using rawSQLStmt and scan rows to a collection
 func QueryCollection[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
 	rawSQLStmt string,
 	args ...any, // variadic
-) (*orm.ModelCollection[MP, ID], error) {
+) (*orm.Collection[MP, ID], error) {
 	rows, err := dbClient.QueryRows(ctx, rawSQLStmt, args...)
 	if err != nil {
 		return nil, err
@@ -145,13 +145,13 @@ func QueryCollection[
 
 // RowsToCollection scan rows to a collection
 func RowsToCollection[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	rows Rows,
-) (*orm.ModelCollection[MP, ID], error) {
-	coll := orm.NewEmptyOrderedModelCollection[MP, ID]()
+) (*orm.Collection[MP, ID], error) {
+	coll := orm.NewEmptyOrderedCollection[MP, ID]()
 
 	for rows.Next() {
 		var item M
