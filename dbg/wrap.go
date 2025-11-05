@@ -1,12 +1,12 @@
 package dbg
 
-type Packed[T any] struct {
+type Wrapped[T any] struct {
 	Data      T   `json:"data"`
 	DebugData any `json:"debug_data,omitempty"`
 }
 
-func Pack[T any](data T) *Packed[T] {
-	return &Packed[T]{
+func Wrap[T any](data T) *Wrapped[T] {
+	return &Wrapped[T]{
 		Data: data,
 	}
 }
