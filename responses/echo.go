@@ -38,15 +38,15 @@ func (h *EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	rBodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		WriteSimpleErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("Failed to Read Data: %v", err))
+		WriteSimpleErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("Failed to Read OriginalData: %v", err))
 		return
 	}
 
 	rBodyPayload := make(map[string]interface{})
 	rBodyPayload["raw"] = string(rBodyBytes)
 
-	// Since we already consumed r.Data with io.ReadAll(r.Data),
-	// Reassign r.Data to a No-op closer Reader on a copied buffer like rewinding r.Data
+	// Since we already consumed r.OriginalData with io.ReadAll(r.OriginalData),
+	// Reassign r.OriginalData to a No-op closer Reader on a copied buffer like rewinding r.OriginalData
 	r.Body = io.NopCloser(bytes.NewReader(rBodyBytes))
 
 	rContentType := r.Header.Get("Content-Type")
