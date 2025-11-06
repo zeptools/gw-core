@@ -13,8 +13,8 @@ type Collection[MP Identifiable[ID], ID comparable] struct {
 }
 
 func NewEmptyOrderedCollection[
-P Identifiable[ID],
-ID comparable,
+	P Identifiable[ID],
+	ID comparable,
 ]() *Collection[P, ID] {
 	return &Collection[P, ID]{
 		itemsMap:   make(map[ID]P),
@@ -23,8 +23,8 @@ ID comparable,
 }
 
 func NewEmptyUnorderedCollection[
-P Identifiable[ID],
-ID comparable,
+	P Identifiable[ID],
+	ID comparable,
 ]() *Collection[P, ID] {
 	return &Collection[P, ID]{
 		itemsMap: make(map[ID]P),
@@ -32,8 +32,8 @@ ID comparable,
 }
 
 func NewUnorderedCollection[
-P Identifiable[ID],
-ID comparable,
+	P Identifiable[ID],
+	ID comparable,
 ](items []P) *Collection[P, ID] {
 	coll := &Collection[P, ID]{
 		itemsMap: make(map[ID]P, len(items)),
@@ -45,8 +45,8 @@ ID comparable,
 }
 
 func NewOrderedCollection[
-P Identifiable[ID],
-ID comparable,
+	P Identifiable[ID],
+	ID comparable,
 ](items []P) *Collection[P, ID] {
 	coll := &Collection[P, ID]{
 		itemsMap:   make(map[ID]P, len(items)),
@@ -210,9 +210,9 @@ func (c *Collection[MP, ID]) Filter(fn func(MP) bool) *Collection[MP, ID] {
 // Every model contributes exactly one value. No skipping.
 // Conceptually equivalent to: [yield(m) for m in c].
 func EnumerateToSlice[
-MP Identifiable[ID],
-ID comparable,
-V any,
+	MP Identifiable[ID],
+	ID comparable,
+	V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) V,
@@ -221,7 +221,7 @@ V any,
 	// new slice with the fixed length
 	sl := make([]V, 0, size)
 	// With the fixed length, we don't use ForEach to avoid sl = append(sl, v) for better performance
-	if c.orderedIDs != nil {
+	if len(c.orderedIDs) > 0 {
 		for i, id := range c.orderedIDs {
 			if mp, ok := c.itemsMap[id]; ok {
 				sl[i] = yield(mp)
@@ -241,10 +241,10 @@ V any,
 // Every model contributes exactly one key–value pair. No skipping.
 // Conceptually equivalent to: {k: v for m in c}.
 func EnumerateToMap[
-MP Identifiable[ID],
-ID comparable,
-K comparable,
-V any,
+	MP Identifiable[ID],
+	ID comparable,
+	K comparable,
+	V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) (K, V),
@@ -262,9 +262,9 @@ V any,
 // Returns a slice of yielded values.
 // Equivalent to a list comprehension: [yield(m) for m in c if yield(m) != nil].
 func CollectToSlice[
-MP Identifiable[ID],
-ID comparable,
-V any,
+	MP Identifiable[ID],
+	ID comparable,
+	V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) *V,
@@ -282,10 +282,10 @@ V any,
 // If yield returns nil, the element is skipped (conditional yield).
 // The yielded key–value pair determines each map entry.
 func CollectToMap[
-MP Identifiable[ID],
-ID comparable,
-K comparable,
-V any,
+	MP Identifiable[ID],
+	ID comparable,
+	K comparable,
+	V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) (*K, *V),
@@ -300,9 +300,9 @@ V any,
 }
 
 func CollectUniqueToSlice[
-MP Identifiable[ID],
-ID comparable,
-V comparable,
+	MP Identifiable[ID],
+	ID comparable,
+	V comparable,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) *V,
@@ -346,10 +346,10 @@ V comparable,
 // If yield returns nil, that entity is skipped.
 // The resulting collection does not preserve iteration order.
 func BuildUnorderedCollectionFrom[
-SP Identifiable[SID],
-SID comparable,
-NP Identifiable[NID],
-NID comparable,
+	SP Identifiable[SID],
+	SID comparable,
+	NP Identifiable[NID],
+	NID comparable,
 ](
 	src *Collection[SP, SID],
 	yield func(SP) *NP, // return pointer of NP so we can filter it out if nil
