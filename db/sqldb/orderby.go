@@ -17,14 +17,14 @@ func (o OrderBy) String() string {
 }
 
 // OrderByClause joins multiple OrderBy items into a valid ORDER BY SQL fragment.
-func OrderByClause(orders []OrderBy) string {
-	if len(orders) == 0 {
+func OrderByClause(orderBys []OrderBy) string {
+	if len(orderBys) == 0 {
 		return ""
 	}
 	var b strings.Builder
-	b.Grow(16 * len(orders)) // rough prealloc: " column DESC, "
+	b.Grow(16 * len(orderBys)) // rough prealloc: " column DESC, "
 	b.WriteString(" ORDER BY ")
-	for i, o := range orders {
+	for i, o := range orderBys {
 		if i > 0 {
 			b.WriteString(", ")
 		}

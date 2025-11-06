@@ -52,10 +52,10 @@ CID comparable,
 	foreignKeyColumn Column,                             // on the child
 	foreignKey func(CP) PID,                             // on the child
 	relationFieldPtr func(PP) **orm.Collection[CP, CID], // on the parent
-	orderBy ...OrderBy,
+	orderBys ...OrderBy,
 ) (*orm.Collection[CP, CID], error) {
 	whereClause := fmt.Sprintf(" WHERE %s IN (%s)", foreignKeyColumn.Name(), dbClient.Placeholders(parents.Len()))
-	sqlStmt := sqlSelectBase + whereClause + OrderByClause(orderBy)
+	sqlStmt := sqlSelectBase + whereClause + OrderByClause(orderBys)
 	parentIDsAsAny := parents.IDsAsAny()
 	children, err := RawQueryCollection[C, CP, CID](ctx, dbClient, sqlStmt, parentIDsAsAny...)
 	if err != nil {
