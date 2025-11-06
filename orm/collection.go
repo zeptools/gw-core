@@ -206,10 +206,10 @@ func (c *Collection[MP, ID]) Filter(fn func(MP) bool) *Collection[MP, ID] {
 	return filtered
 }
 
-// EnumerateToSlicePerf iterates over every model in the collection and calls yield for each.
+// EnumerateToSlice iterates over every model in the collection and calls yield for each.
 // Every model contributes exactly one value. No skipping.
 // Conceptually equivalent to: [yield(m) for m in c].
-func EnumerateToSlicePerf[
+func EnumerateToSlice[
 MP Identifiable[ID],
 ID comparable,
 V any,
@@ -219,9 +219,9 @@ V any,
 ) []V {
 	size := c.Len()
 	// new slice with the fixed length
-	sl := make([]V, 0, size)
+	sl := make([]V, size)
 	// With the fixed length, we don't use ForEach to avoid sl = append(sl, v) for better performance
-	if len(c.orderedIDs) > 0 {
+	if c.orderedIDs != nil {
 		for i, id := range c.orderedIDs {
 			if mp, ok := c.itemsMap[id]; ok {
 				sl[i] = yield(mp)
@@ -237,7 +237,7 @@ V any,
 	return sl
 }
 
-func EnumerateToSlice[
+func EnumerateToSliceWithForEach[
 MP Identifiable[ID],
 ID comparable,
 V any,
