@@ -10,8 +10,8 @@ import (
 )
 
 func RawQueryItem[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -23,8 +23,8 @@ MP Scannable[M], // *Model Implementing Scannable[M]
 }
 
 func RawQueryItems[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
+	M any, // Model struct
+	MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -45,9 +45,9 @@ MP Scannable[M], // *Model Implementing Scannable[M]
 
 // RawQueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func RawQueryMap[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -68,9 +68,9 @@ ID comparable,
 
 // RawQueryCollection queries items using rawSQLStmt and scan rows to a collection
 func RawQueryCollection[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -90,10 +90,10 @@ ID comparable,
 }
 
 func QueryCollectionByColumn[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
-V any,
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
+	V any,
 ](
 	ctx context.Context,
 	dbClient Client,
