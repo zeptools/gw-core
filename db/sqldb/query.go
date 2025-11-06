@@ -2,6 +2,7 @@ package sqldb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -88,7 +89,7 @@ func RawQueryCollection[
 	return ScanRowsToCollection[M, MP, ID](rows)
 }
 
-func QueryCollectionByColumnValues[
+func QueryCollectionByColumn[
 	M any, // Model struct
 	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
 	ID comparable,
@@ -98,14 +99,26 @@ func QueryCollectionByColumnValues[
 	dbClient Client,
 	sqlSelectBase string,
 	column Column,
-	values []V,
+	values ...V,
 ) (*orm.Collection[MP, ID], error) {
-	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", column.Name(), dbClient.Placeholders(len(values)))
-	valuesAsAny := make([]any, len(values))
-	for i, v := range values {
-		valuesAsAny[i] = v
+	if len(values) == 0 {
+		return nil, errors.New("empty values")
 	}
-	rows, err := dbClient.QueryRows(ctx, sqlStmt, valuesAsAny...)
+	var (
+		rows Rows
+		err  error
+	)
+	if len(values) == 1 {
+		sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s = %s", column.Name(), dbClient.SinglePlaceholder())
+		rows, err = dbClient.QueryRows(ctx, sqlStmt, values[0])
+	} else {
+		sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", column.Name(), dbClient.Placeholders(len(values)))
+		valuesAsAny := make([]any, len(values))
+		for i, v := range values {
+			valuesAsAny[i] = v
+		}
+		rows, err = dbClient.QueryRows(ctx, sqlStmt, valuesAsAny...)
+	}
 	if err != nil {
 		return nil, err
 	}
