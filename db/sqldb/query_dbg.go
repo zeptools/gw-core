@@ -35,7 +35,7 @@ func LoadBelongsTo[
 	log.Printf("[DEBUG] LoadBelongsTo() FKs: %s", strings.Join(parts, ","))
 	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE id IN (%s)", dbClient.Placeholders(len(fKeysAsAny)))
 	log.Printf("[DEBUG] LoadBelongsTo() sqlStmt %s", sqlStmt)
-	parents, err := QueryCollection[P, PP, PID](ctx, dbClient, sqlStmt, fKeysAsAny...)
+	parents, err := RawQueryCollection[P, PP, PID](ctx, dbClient, sqlStmt, fKeysAsAny...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func LoadHasMany[
 	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", foreignKeyColumn.Name(),
 		dbClient.Placeholders(parents.Len(), 2))
 	parentIDsAsAny := parents.IDsAsAny()
-	children, err := QueryCollection[C, CP, CID](ctx, dbClient, sqlStmt, parentIDsAsAny...)
+	children, err := RawQueryCollection[C, CP, CID](ctx, dbClient, sqlStmt, parentIDsAsAny...)
 	if err != nil {
 		return nil, err
 	}

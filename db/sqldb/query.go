@@ -8,9 +8,9 @@ import (
 	"github.com/zeptools/gw-core/orm"
 )
 
-func QueryItem[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
+func RawQueryItem[
+	M any, // Model struct
+	MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -18,25 +18,12 @@ MP Scannable[M], // *Model Implementing Scannable[M]
 	args ...any, // variadic
 ) (*M, error) { // Returns the Pointer to the Newly Created Item
 	row := dbClient.QueryRow(ctx, rawSQLStmt, args...)
-	return RowToItem[M, MP](row)
+	return ScanRowToItem[M, MP](row)
 }
 
-func RowToItem[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
-](row Row) (*M, error) { // Returns the Pointer to the Newly Created Item
-	var item M     // struct with zero values for the fields
-	p := MP(&item) // p is *M, which satisfies scanFieldsProvider interface
-	err := row.Scan(p.FieldsToScan()...)
-	if err != nil {
-		return nil, err
-	}
-	return &item, nil
-}
-
-func QueryItems[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
+func RawQueryItems[
+	M any, // Model struct
+	MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -52,34 +39,14 @@ MP Scannable[M], // *Model Implementing Scannable[M]
 			log.Printf("rows.Close() failed: %v", err)
 		}
 	}()
-	return RowsToItems[M, MP](rows)
+	return ScanRowsToItems[M, MP](rows)
 }
 
-func RowsToItems[
-M any,           // Model struct
-MP Scannable[M], // *Model Implementing Scannable[M]
-](rows Rows) ([]*M, error) { // Returns a Slice of Model-Pointers
-	var itemptrs []*M
-	for rows.Next() {
-		var item M     // struct with zero values for the fields
-		p := MP(&item) // p is *M, which satisfies scanFieldsProvider interface
-		// Scan the Fields of Each Row to the Fields of the new struct of the Model
-		if err := rows.Scan(p.FieldsToScan()...); err != nil {
-			return nil, fmt.Errorf("scan failed: %v", err)
-		}
-		itemptrs = append(itemptrs, &item) // Collect the pointers
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error during iterating rows: %v", err)
-	}
-	return itemptrs, nil
-}
-
-// QueryMap queries items using rawSQLStmt and scan rows to a map[id]item
-func QueryMap[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-ID comparable,
+// RawQueryMap queries items using rawSQLStmt and scan rows to a map[id]item
+func RawQueryMap[
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -95,36 +62,14 @@ ID comparable,
 			log.Printf("rows.Close() failed: %v", err)
 		}
 	}()
-	return RowsToMap[M, MP, ID](rows)
+	return ScanRowsToMap[M, MP, ID](rows)
 }
 
-// RowsToMap scan rows to a map[id]item
-func RowsToMap[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-ID comparable,
-](rows Rows) (map[ID]*M, error) { // Returns a ItemsMap of ID to Model-Pointers
-	idItemptrs := map[ID]*M{}
-	for rows.Next() {
-		var item M     // struct with zero values for the fields
-		p := MP(&item) // p is *M, which satisfies scanFieldsProvider interface
-		// Scan the Fields of Each Row to the Fields of the new struct of the Model
-		if err := rows.Scan(p.FieldsToScan()...); err != nil {
-			return nil, fmt.Errorf("scan failed: %v", err)
-		}
-		idItemptrs[p.GetID()] = &item
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error during iterating rows: %v", err)
-	}
-	return idItemptrs, nil
-}
-
-// QueryCollection queries items using rawSQLStmt and scan rows to a collection
-func QueryCollection[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
+// RawQueryCollection queries items using rawSQLStmt and scan rows to a collection
+func RawQueryCollection[
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -140,29 +85,34 @@ ID comparable,
 			log.Printf("rows.Close() failed: %v", err)
 		}
 	}()
-	return RowsToCollection[M, MP, ID](rows)
+	return ScanRowsToCollection[M, MP, ID](rows)
 }
 
-// RowsToCollection scan rows to a collection
-func RowsToCollection[
-M any,                           // Model struct
-MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-ID comparable,
+func QueryCollectionByColumnValues[
+	M any, // Model struct
+	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+	ID comparable,
+	V any,
 ](
-	rows Rows,
+	ctx context.Context,
+	dbClient Client,
+	sqlSelectBase string,
+	column Column,
+	values []V,
 ) (*orm.Collection[MP, ID], error) {
-	coll := orm.NewEmptyOrderedCollection[MP, ID]()
-
-	for rows.Next() {
-		var item M
-		p := MP(&item) // *M implementing ScannableIdentifiable
-		if err := rows.Scan(p.FieldsToScan()...); err != nil {
-			return nil, fmt.Errorf("scan failed: %v", err)
+	sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", column.Name(), dbClient.Placeholders(len(values)))
+	valuesAsAny := make([]any, len(values))
+	for i, v := range values {
+		valuesAsAny[i] = v
+	}
+	rows, err := dbClient.QueryRows(ctx, sqlStmt, valuesAsAny...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("rows.Close() failed: %v", err)
 		}
-		coll.Add(p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error during iterating rows: %v", err)
-	}
-	return coll, nil
+	}()
+	return ScanRowsToCollection[M, MP, ID](rows)
 }
