@@ -10,8 +10,8 @@ import (
 )
 
 func RawQueryItem[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -23,8 +23,8 @@ func RawQueryItem[
 }
 
 func RawQueryItems[
-	M any, // Model struct
-	MP Scannable[M], // *Model Implementing Scannable[M]
+M any,           // Model struct
+MP Scannable[M], // *Model Implementing Scannable[M]
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -45,9 +45,9 @@ func RawQueryItems[
 
 // RawQueryMap queries items using rawSQLStmt and scan rows to a map[id]item
 func RawQueryMap[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model Implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -68,9 +68,9 @@ func RawQueryMap[
 
 // RawQueryCollection queries items using rawSQLStmt and scan rows to a collection
 func RawQueryCollection[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
 ](
 	ctx context.Context,
 	dbClient Client,
@@ -90,16 +90,17 @@ func RawQueryCollection[
 }
 
 func QueryCollectionByColumn[
-	M any, // Model struct
-	MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
-	ID comparable,
-	V any,
+M any,                           // Model struct
+MP ScannableIdentifiable[M, ID], // *Model implementing ScannableIdentifiable[M, ID]
+ID comparable,
+V any,
 ](
 	ctx context.Context,
 	dbClient Client,
 	sqlSelectBase string,
 	column Column,
-	values ...V,
+	values []V,
+	orderBys ...OrderBy,
 ) (*orm.Collection[MP, ID], error) {
 	if len(values) == 0 {
 		return nil, errors.New("empty values")
@@ -109,10 +110,12 @@ func QueryCollectionByColumn[
 		err  error
 	)
 	if len(values) == 1 {
-		sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s = %s", column.Name(), dbClient.SinglePlaceholder())
+		whereClause := fmt.Sprintf(" WHERE %s = %s", column.Name(), dbClient.SinglePlaceholder())
+		sqlStmt := sqlSelectBase + whereClause + OrderByClause(orderBys)
 		rows, err = dbClient.QueryRows(ctx, sqlStmt, values[0])
 	} else {
-		sqlStmt := sqlSelectBase + fmt.Sprintf(" WHERE %s IN (%s)", column.Name(), dbClient.Placeholders(len(values)))
+		whereClause := fmt.Sprintf(" WHERE %s IN (%s)", column.Name(), dbClient.Placeholders(len(values)))
+		sqlStmt := sqlSelectBase + whereClause + OrderByClause(orderBys)
 		valuesAsAny := make([]any, len(values))
 		for i, v := range values {
 			valuesAsAny[i] = v
