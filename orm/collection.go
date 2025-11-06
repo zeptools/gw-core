@@ -11,8 +11,8 @@ type Collection[MP Identifiable[ID], ID comparable] struct {
 }
 
 func NewEmptyOrderedCollection[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ]() *Collection[P, ID] {
 	return &Collection[P, ID]{
 		itemsMap:   make(map[ID]P),
@@ -21,8 +21,8 @@ func NewEmptyOrderedCollection[
 }
 
 func NewEmptyUnorderedCollection[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ]() *Collection[P, ID] {
 	return &Collection[P, ID]{
 		itemsMap: make(map[ID]P),
@@ -30,8 +30,8 @@ func NewEmptyUnorderedCollection[
 }
 
 func NewUnorderedCollection[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ](items []P) *Collection[P, ID] {
 	coll := &Collection[P, ID]{
 		itemsMap: make(map[ID]P, len(items)),
@@ -43,8 +43,8 @@ func NewUnorderedCollection[
 }
 
 func NewOrderedCollection[
-	P Identifiable[ID],
-	ID comparable,
+P Identifiable[ID],
+ID comparable,
 ](items []P) *Collection[P, ID] {
 	coll := &Collection[P, ID]{
 		itemsMap:   make(map[ID]P, len(items)),
@@ -133,7 +133,7 @@ func (c *Collection[MP, ID]) MarshalJSON() ([]byte, error) {
 // ForEach calls fn for every model in the collection.
 // If the collection has an order, it respects that order.
 func (c *Collection[MP, ID]) ForEach(fn func(MP)) {
-	if len(c.orderedIDs) > 0 {
+	if c.orderedIDs != nil {
 		for _, id := range c.orderedIDs {
 			if mp, ok := c.itemsMap[id]; ok {
 				fn(mp)
@@ -196,18 +196,30 @@ func (c *Collection[MP, ID]) Filter(fn func(MP) bool) *Collection[MP, ID] {
 // Every model contributes exactly one value. No skipping.
 // Conceptually equivalent to: [yield(m) for m in c].
 func EnumerateToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) V,
 ) []V {
-	sl := make([]V, 0, c.Len()) // new slice
-	c.ForEach(func(mp MP) {
-		// we don't mutate, but yield can. caller's responsibility
-		sl = append(sl, yield(mp))
-	})
+	size := c.Len()
+	// new slice with the fixed length
+	sl := make([]V, 0, size)
+	// With the fixed length, we don't use ForEach to avoid sl = append(sl, v) for better performance
+	if c.orderedIDs != nil {
+		for i, id := range c.orderedIDs {
+			if mp, ok := c.itemsMap[id]; ok {
+				sl[i] = yield(mp)
+			}
+		}
+		return sl
+	}
+	i := 0
+	for _, mp := range c.itemsMap {
+		sl[i] = yield(mp)
+		i++
+	}
 	return sl
 }
 
@@ -215,17 +227,16 @@ func EnumerateToSlice[
 // Every model contributes exactly one key–value pair. No skipping.
 // Conceptually equivalent to: {k: v for m in c}.
 func EnumerateToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) (K, V),
 ) map[K]V {
 	m := make(map[K]V, c.Len()) // new map
 	c.ForEachUnorderly(func(mp MP) {
-		// we don't mutate, but yield can. caller's responsibility
 		k, v := yield(mp)
 		m[k] = v
 	})
@@ -237,16 +248,15 @@ func EnumerateToMap[
 // Returns a slice of yielded values.
 // Equivalent to a list comprehension: [yield(m) for m in c if yield(m) != nil].
 func CollectToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) *V,
 ) []V {
 	sl := make([]V, 0, c.Len()) // new slice
 	c.ForEach(func(mp MP) {
-		// we don't mutate, but yield can. caller's responsibility
 		if vp := yield(mp); vp != nil {
 			sl = append(sl, *vp)
 		}
@@ -258,17 +268,16 @@ func CollectToSlice[
 // If yield returns nil, the element is skipped (conditional yield).
 // The yielded key–value pair determines each map entry.
 func CollectToMap[
-	MP Identifiable[ID],
-	ID comparable,
-	K comparable,
-	V any,
+MP Identifiable[ID],
+ID comparable,
+K comparable,
+V any,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) (*K, *V),
 ) map[K]V {
 	m := make(map[K]V, c.Len()) // new map
 	c.ForEachUnorderly(func(mp MP) {
-		// we don't mutate, but yield can. caller's responsibility
 		if kp, vp := yield(mp); kp != nil && vp != nil {
 			m[*kp] = *vp
 		}
@@ -277,9 +286,9 @@ func CollectToMap[
 }
 
 func CollectUniqueToSlice[
-	MP Identifiable[ID],
-	ID comparable,
-	V comparable,
+MP Identifiable[ID],
+ID comparable,
+V comparable,
 ](
 	c *Collection[MP, ID],
 	yield func(MP) *V,
@@ -323,15 +332,15 @@ func CollectUniqueToSlice[
 // RelationField is on the Child
 // Optional Version
 func LinkOptionalBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
 	children *Collection[CP, CID],
 	parents *Collection[PP, PID],
 	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP, // on the child
+	relationFieldPtr func(CP) *PP,    // on the child
 ) {
 	for _, child := range children.itemsMap {
 		fkPtr := foreignKeyFieldPtr(child)
@@ -349,14 +358,14 @@ func LinkOptionalBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField is on the Child
 func LinkBelongsTo[
-	CP Identifiable[CID],
-	CID comparable,
-	PP Identifiable[PID],
-	PID comparable,
+CP Identifiable[CID],
+CID comparable,
+PP Identifiable[PID],
+PID comparable,
 ](
 	children *Collection[CP, CID],
 	parents *Collection[PP, PID],
-	foreignKey func(CP) PID, // on the child
+	foreignKey func(CP) PID,       // on the child
 	relationFieldPtr func(CP) *PP, // on the child
 ) error {
 	for _, child := range children.itemsMap {
@@ -377,14 +386,14 @@ func LinkBelongsTo[
 // ForeignKeyField is on the Child
 // RelationField (a Slice) is on the Parent
 func LinkHasMany[
-	PP Identifiable[PID],
-	PID comparable,
-	CP Identifiable[CID],
-	CID comparable,
+PP Identifiable[PID],
+PID comparable,
+CP Identifiable[CID],
+CID comparable,
 ](
 	parents *Collection[PP, PID],
 	children *Collection[CP, CID],
-	foreignKey func(CP) PID, // on the child
+	foreignKey func(CP) PID,                         // on the child
 	relationFieldPtr func(PP) **Collection[CP, CID], // on the parent
 ) {
 	childCollGrpByPID := make(map[PID]*Collection[CP, CID], parents.Len())
