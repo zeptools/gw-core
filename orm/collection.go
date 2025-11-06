@@ -352,12 +352,11 @@ NP Identifiable[NID],
 NID comparable,
 ](
 	src *Collection[SP, SID],
-	yield func(SP) *NP,
+	yield func(SP) *NP, // return pointer of NP so we can filter it out if nil
 ) *Collection[NP, NID] {
 	if src == nil {
 		return nil
 	}
-
 	newColl := NewEmptyUnorderedCollection[NP, NID]()
 	for _, sp := range src.itemsMap {
 		if np := yield(sp); np != nil {

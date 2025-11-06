@@ -4,6 +4,11 @@ type Identifiable[ID comparable] interface {
 	GetID() ID
 }
 
+type PointableIdentifiable[M any, ID comparable] interface {
+	~*M
+	Identifiable[ID]
+}
+
 func ModelPtrsToIDMap[
 	MP Identifiable[ID], // *Model struct
 	ID comparable,
