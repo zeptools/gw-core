@@ -5,9 +5,11 @@ import (
 	"fmt"
 )
 
+// Collection (orm.Collection) is a set-like container of identifiable entities.
+// It enforces uniqueness by ID and optionally preserves iteration order
 type Collection[MP Identifiable[ID], ID comparable] struct {
-	itemsMap   map[ID]MP
-	orderedIDs []ID // optional (default = nil). only populated if you care about iteration order
+	itemsMap   map[ID]MP // uniqueness enforced by ID
+	orderedIDs []ID      // optional (default = nil). only populated if you care about iteration order
 }
 
 func NewEmptyOrderedCollection[
@@ -74,10 +76,22 @@ func (c *Collection[MP, ID]) Find(id ID) (MP, bool) {
 
 func (c *Collection[MP, ID]) Add(item MP) {
 	id := item.GetID()
-	_, already := c.itemsMap[id]
+	_, exists := c.itemsMap[id]
 	c.itemsMap[id] = item
 	// Preserve order if ordered collection
-	if c.orderedIDs != nil && !already {
+	if c.orderedIDs != nil && !exists {
+		c.orderedIDs = append(c.orderedIDs, id)
+	}
+}
+
+func (c *Collection[MP, ID]) AddIfNew(item MP) {
+	id := item.GetID()
+	if _, exists := c.itemsMap[id]; exists {
+		return
+	}
+	c.itemsMap[id] = item
+	// Preserve order if ordered collection
+	if c.orderedIDs != nil {
 		c.orderedIDs = append(c.orderedIDs, id)
 	}
 }
@@ -327,90 +341,28 @@ V comparable,
 	return sl
 }
 
-// LinkOptionalBelongsTo connects ChildCollection-ParentCollection where Child-BelongsTo-Parent
-// ForeignKeyField is on the Child
-// RelationField is on the Child
-// Optional Version
-func LinkOptionalBelongsTo[
-CP Identifiable[CID],
-CID comparable,
-PP Identifiable[PID],
-PID comparable,
+// BuildUnorderedCollectionFrom constructs a new unordered collection
+// by applying yield to each entity in the source collection.
+// If yield returns nil, that entity is skipped.
+// The resulting collection does not preserve iteration order.
+func BuildUnorderedCollectionFrom[
+SP Identifiable[SID],
+SID comparable,
+NP Identifiable[NID],
+NID comparable,
 ](
-	children *Collection[CP, CID],
-	parents *Collection[PP, PID],
-	foreignKeyFieldPtr func(CP) *PID, // on the child
-	relationFieldPtr func(CP) *PP,    // on the child
-) {
-	for _, child := range children.itemsMap {
-		fkPtr := foreignKeyFieldPtr(child)
-		if fkPtr == nil {
-			continue
-		}
-		fk := *fkPtr
-		if parent, ok := parents.itemsMap[fk]; ok {
-			*relationFieldPtr(child) = parent
-		}
+	src *Collection[SP, SID],
+	yield func(SP) *NP,
+) *Collection[NP, NID] {
+	if src == nil {
+		return nil
 	}
-}
 
-// LinkBelongsTo - Strict Version
-// ForeignKeyField is on the Child
-// RelationField is on the Child
-func LinkBelongsTo[
-CP Identifiable[CID],
-CID comparable,
-PP Identifiable[PID],
-PID comparable,
-](
-	children *Collection[CP, CID],
-	parents *Collection[PP, PID],
-	foreignKey func(CP) PID,       // on the child
-	relationFieldPtr func(CP) *PP, // on the child
-) error {
-	for _, child := range children.itemsMap {
-		fk := foreignKey(child)
-		parent, ok := parents.itemsMap[fk]
-		if !ok {
-			return fmt.Errorf(
-				"LinkBelongsTo: parent with ID %v not found for child ID %v",
-				fk, child.GetID(),
-			)
-		}
-		*relationFieldPtr(child) = parent
-	}
-	return nil
-}
-
-// LinkHasMany connects ParentCollection-ChildCollection where a Parent-HasMany-Children
-// ForeignKeyField is on the Child
-// RelationField (a Slice) is on the Parent
-func LinkHasMany[
-PP Identifiable[PID],
-PID comparable,
-CP Identifiable[CID],
-CID comparable,
-](
-	parents *Collection[PP, PID],
-	children *Collection[CP, CID],
-	foreignKey func(CP) PID,                         // on the child
-	relationFieldPtr func(PP) **Collection[CP, CID], // on the parent
-) {
-	childCollGrpByPID := make(map[PID]*Collection[CP, CID], parents.Len())
-	for _, child := range children.itemsMap {
-		pid := foreignKey(child) // child's FK to parent id
-		childColl, ok := childCollGrpByPID[pid]
-		if !ok {
-			childColl = NewEmptyOrderedCollection[CP, CID]()
-			childCollGrpByPID[pid] = childColl
-		}
-		childColl.Add(child)
-	}
-	for pid, parent := range parents.itemsMap {
-		if childColl, ok := childCollGrpByPID[pid]; ok {
-			*relationFieldPtr(parent) = childColl
-		} else {
-			*relationFieldPtr(parent) = NewEmptyOrderedCollection[CP, CID]()
+	newColl := NewEmptyUnorderedCollection[NP, NID]()
+	for _, sp := range src.itemsMap {
+		if np := yield(sp); np != nil {
+			newColl.AddIfNew(*np)
 		}
 	}
+	return newColl
 }
