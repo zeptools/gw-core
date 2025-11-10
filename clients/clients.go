@@ -2,7 +2,7 @@ package clients
 
 import "context"
 
-type ClientConf struct {
+type ClientAppConf struct {
 	ID                   string    `json:"-"` // filled with a key from .clients.json
 	Name                 string    `json:"name"`
 	ExpireAccess         int       `json:"expire_access"`
@@ -22,13 +22,13 @@ type DebugOpts struct {
 
 type ctxKey struct{}
 
-func WithClientConf(ctx context.Context, conf ClientConf) context.Context {
+func WithClientConf(ctx context.Context, conf ClientAppConf) context.Context {
 	return context.WithValue(ctx, ctxKey{}, conf)
 }
 
-func ClientConfFromContext(ctx context.Context) (ClientConf, bool) {
+func ClientConfFromContext(ctx context.Context) (ClientAppConf, bool) {
 	ctxVal := ctx.Value(ctxKey{})
-	val, ok := ctxVal.(ClientConf)
+	val, ok := ctxVal.(ClientAppConf)
 	return val, ok
 }
 

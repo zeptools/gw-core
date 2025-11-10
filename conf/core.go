@@ -31,27 +31,27 @@ import (
 // Core - common config
 // B = BucketID Type _ e.g. string, int64, etc
 type Core[B comparable] struct {
-	AppName             string                                        `json:"app_name"`
-	Listen              string                                        `json:"listen"`     // HTTP Server Listen IP:PORT Address
-	Host                string                                        `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
-	DebugOpts           DebugOpts                                     `json:"debug_opts"` // Debug Options
-	AppRoot             string                                        `json:"-"`          // Filled from compiled paths
-	RootCtx             context.Context                               `json:"-"`          // Global Context with RootCancel
-	RootCancel          context.CancelFunc                            `json:"-"`          // CancelFunc for RootCtx
-	UDSService          *uds.Service                                  `json:"-"`          // PrepareUDSService()
-	JobScheduler        *schedjobs.Scheduler                          `json:"-"`          // PrepareJobScheduler()
-	WebService          *web.Service                                  `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[B]                      `json:"-"` // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                                     `json:"-"` // map[string]string
-	SessionLocks        *sync.Map                                     `json:"-"` // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                                     `json:"-"` // map[string]struct{}
-	StorageConf         storages.Conf                                 `json:"-"` // LoadStorageConf()
-	HttpClient          *http.Client                                  `json:"-"` // for requests to external apis
-	KVDBConf            kvdb.Conf                                     `json:"-"` // LoadKVDBConf()
-	KVDBClient          kvdb.Client                                   `json:"-"` // PrepareKVDBClient()
-	SQLDBConfs          map[string]*sqldb.Conf                        `json:"-"` // LoadSQLDBConfs()
-	SQLDBClients        map[string]sqldb.Client                       `json:"-"` // PrepareSQLDBClients()
-	ClientApps          atomic.Pointer[map[string]clients.ClientConf] `json:"-"` // [Hot Reload] Registered Client Apps {client_id: clientConf}
+	AppName             string                                           `json:"app_name"`
+	Listen              string                                           `json:"listen"`     // HTTP Server Listen IP:PORT Address
+	Host                string                                           `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
+	DebugOpts           DebugOpts                                        `json:"debug_opts"` // Debug Options
+	AppRoot             string                                           `json:"-"`          // Filled from compiled paths
+	RootCtx             context.Context                                  `json:"-"`          // Global Context with RootCancel
+	RootCancel          context.CancelFunc                               `json:"-"`          // CancelFunc for RootCtx
+	UDSService          *uds.Service                                     `json:"-"`          // PrepareUDSService()
+	JobScheduler        *schedjobs.Scheduler                             `json:"-"`          // PrepareJobScheduler()
+	WebService          *web.Service                                     `json:"-"`
+	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"` // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                                        `json:"-"` // map[string]string
+	SessionLocks        *sync.Map                                        `json:"-"` // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                                        `json:"-"` // map[string]struct{}
+	StorageConf         storages.Conf                                    `json:"-"` // LoadStorageConf()
+	HttpClient          *http.Client                                     `json:"-"` // for requests to external apis
+	KVDBConf            kvdb.Conf                                        `json:"-"` // LoadKVDBConf()
+	KVDBClient          kvdb.Client                                      `json:"-"` // PrepareKVDBClient()
+	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"` // LoadSQLDBConfs()
+	SQLDBClients        map[string]sqldb.Client                          `json:"-"` // PrepareSQLDBClients()
+	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"` // [Hot Reload] Registered Client Apps {client_id: clientConf}
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -285,43 +285,43 @@ func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 }
 
 // PrepareClientApps prepares ClientApps
-// building a new clients.ClientConf map and swaps the atomic pointer for the ClientApps
+// building a new clients.ClientAppConf map and swaps the atomic pointer for the ClientApps
 // So, this can be invoked to Hot-Reload the ClientApps
 func (c *Core[B]) PrepareClientApps() error {
 	var (
 		err           error
-		newClientApps map[string]clients.ClientConf
+		newClientApps map[string]clients.ClientAppConf
 	)
-	if newClientApps, err = c.newClientsConfMapFromFile(); err != nil {
+	if newClientApps, err = c.newClientAppsConfMapFromFile(); err != nil {
 		return err
 	}
 	c.ClientApps.Store(&newClientApps) // atomic store
 	return nil
 }
 
-func (c *Core[B]) newClientsConfMapFromFile() (map[string]clients.ClientConf, error) {
-	clientsFilePath := filepath.Join(c.AppRoot, "config", "clients", ".clients.json")
-	confBytes, err := os.ReadFile(clientsFilePath) // ([]byte, error)
+func (c *Core[B]) newClientAppsConfMapFromFile() (map[string]clients.ClientAppConf, error) {
+	confFilePath := filepath.Join(c.AppRoot, "config", "clients", ".clients.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	var clientsMap map[string]clients.ClientConf
-	if err = json.Unmarshal(confBytes, &clientsMap); err != nil {
+	var confMap map[string]clients.ClientAppConf
+	if err = json.Unmarshal(confBytes, &confMap); err != nil {
 		return nil, err
 	}
-	return clientsMap, nil
+	return confMap, nil
 }
 
-// GetClientConf reads a clients.ClientConf
+// GetClientAppConf reads a clients.ClientAppConf
 // Uses a single atomic cpu instruction
-func (c *Core[B]) GetClientConf(id string) (clients.ClientConf, bool) {
-	clientsConfMapPtr := c.ClientApps.Load()
-	if clientsConfMapPtr == nil {
-		return clients.ClientConf{}, false
+func (c *Core[B]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
+	confMapPtr := c.ClientApps.Load()
+	if confMapPtr == nil {
+		return clients.ClientAppConf{}, false
 	}
-	clientConf, ok := (*clientsConfMapPtr)[id]
-	clientConf.ID = id
-	return clientConf, ok
+	conf, ok := (*confMapPtr)[id]
+	conf.ID = id
+	return conf, ok
 }
 
 func (c *Core[B]) ResourceCleanUp() {
