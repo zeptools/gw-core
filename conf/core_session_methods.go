@@ -49,3 +49,14 @@ func (c *Core[B]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string
 	})
 	return nil
 }
+
+func (c *Core[B]) RemoveWebSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     session.CookieName,
+		Path:     "/",
+		MaxAge:   -1, // Delete
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
