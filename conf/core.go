@@ -27,7 +27,7 @@ import (
 	"github.com/zeptools/gw-core/throttle"
 	"github.com/zeptools/gw-core/uds"
 	"github.com/zeptools/gw-core/web"
-	"github.com/zeptools/gw-core/web/session/login"
+	"github.com/zeptools/gw-core/web/session"
 )
 
 // Core - common config
@@ -54,7 +54,7 @@ type Core[B comparable] struct {
 	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
 	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
 	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
-	WebLoginSessionConf login.Conf                                       `json:"-"`          // PrepareWebLoginSessions()
+	WebSessionConf      session.Conf                                     `json:"-"`          // PrepareWebSessions()
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -327,21 +327,21 @@ func (c *Core[B]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 	return conf, ok
 }
 
-func (c *Core[B]) PrepareWebLoginSessions() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", ".web-login-session.json")
+func (c *Core[B]) PrepareWebSessions() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".web-session.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(confBytes, &c.WebLoginSessionConf); err != nil {
+	if err = json.Unmarshal(confBytes, &c.WebSessionConf); err != nil {
 		return err
 	}
 	// Web Login Session Cipher
-	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(c.WebLoginSessionConf.EncryptionKey))
+	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(c.WebSessionConf.EncryptionKey))
 	if err != nil {
 		log.Fatalf("failed to create the session cipher. %v", err)
 	}
-	c.WebLoginSessionConf.Cipher = cipher
+	c.WebSessionConf.Cipher = cipher
 
 	return nil
 }
