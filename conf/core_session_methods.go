@@ -2,6 +2,7 @@ package conf
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/zeptools/gw-core/web/session"
@@ -29,4 +30,22 @@ func (c *Core[B]) CheckWebSessionFromCookie(ctx context.Context, r *http.Request
 		return false
 	}
 	return found
+}
+
+func (c *Core[B]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string) error {
+	encWebSessionId, err := c.WebSessionConf.Cipher.EncryptEncode([]byte(webSessionId))
+	if err != nil {
+		return fmt.Errorf("failed to encrypt web login session id. %v", err)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:  session.CookieName,
+		Value: encWebSessionId,
+		Path:  "/", // Subpaths will get this cookie.
+		// Domain: // Cannot be set with `__Host-`
+		HttpOnly: true, // JS cannot read it
+		Secure:   true, // only sent over HTTPS
+		MaxAge:   c.WebSessionConf.ExpireHardcap,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return nil
 }
