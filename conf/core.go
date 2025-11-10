@@ -284,6 +284,32 @@ func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 	return nil
 }
 
+// LoadClientConfigs builds a new clients.ClientConf map and swaps the atomic pointer for the ClientApps
+func (c *Core[B]) LoadClientConfigs() error {
+	var (
+		err           error
+		newClientApps map[string]clients.ClientConf
+	)
+	if newClientApps, err = c.newClientsConfMapFromFile(); err != nil {
+		return err
+	}
+	c.ClientApps.Store(&newClientApps) // atomic store
+	return nil
+}
+
+func (c *Core[B]) newClientsConfMapFromFile() (map[string]clients.ClientConf, error) {
+	clientsFilePath := filepath.Join(c.AppRoot, "config", "clients", ".clients.json")
+	confBytes, err := os.ReadFile(clientsFilePath) // ([]byte, error)
+	if err != nil {
+		return nil, err
+	}
+	var clientsMap map[string]clients.ClientConf
+	if err = json.Unmarshal(confBytes, &clientsMap); err != nil {
+		return nil, err
+	}
+	return clientsMap, nil
+}
+
 func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
