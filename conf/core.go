@@ -368,8 +368,3 @@ func (c *Core[B]) ResourceCleanUp() {
 	//----
 	log.Println("[INFO] App Resource Cleanup Complete")
 }
-
-type DebugOpts struct {
-	MaintenanceMode int `json:"maintenance_mode"`
-	AuthBreak       int `json:"auth_break"`
-}
