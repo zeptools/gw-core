@@ -300,7 +300,7 @@ func (c *Core[B]) PrepareClientApps() error {
 }
 
 func (c *Core[B]) newClientAppsConfMapFromFile() (map[string]clients.ClientAppConf, error) {
-	confFilePath := filepath.Join(c.AppRoot, "config", "clients", ".clients.json")
+	confFilePath := filepath.Join(c.AppRoot, "config", ".clients.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return nil, err
