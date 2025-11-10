@@ -1,8 +1,8 @@
-package websession
+package login
 
 import "github.com/zeptools/gw-core/security"
 
-type WebLoginSessionConf struct {
+type Conf struct {
 	LoginPath     string `json:"login_path"`
 	EncryptionKey string `json:"enckey"`
 	ExpireSliding int    `json:"expire_sliding"`

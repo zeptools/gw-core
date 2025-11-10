@@ -1,4 +1,4 @@
-package websession
+package session
 
 import (
 	"crypto/rand"
