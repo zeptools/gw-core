@@ -21,6 +21,7 @@ import (
 	"github.com/zeptools/gw-core/db/sqldb/impls/mysql"
 	"github.com/zeptools/gw-core/db/sqldb/impls/pgsql"
 	"github.com/zeptools/gw-core/schedjobs"
+	"github.com/zeptools/gw-core/security"
 	"github.com/zeptools/gw-core/storages"
 	"github.com/zeptools/gw-core/svc"
 	"github.com/zeptools/gw-core/throttle"
@@ -335,6 +336,13 @@ func (c *Core[B]) PrepareWebLoginSessions() error {
 	if err = json.Unmarshal(confBytes, &c.WebLoginSessionConf); err != nil {
 		return err
 	}
+	// Web Login Session Cipher
+	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(c.WebLoginSessionConf.EncryptionKey))
+	if err != nil {
+		log.Fatalf("failed to create the session cipher. %v", err)
+	}
+	c.WebLoginSessionConf.Cipher = cipher
+
 	return nil
 }
 
