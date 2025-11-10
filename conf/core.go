@@ -284,8 +284,10 @@ func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 	return nil
 }
 
-// LoadClientConfigs builds a new clients.ClientConf map and swaps the atomic pointer for the ClientApps
-func (c *Core[B]) LoadClientConfigs() error {
+// PrepareClientApps prepares ClientApps
+// building a new clients.ClientConf map and swaps the atomic pointer for the ClientApps
+// So, this can be invoked to Hot-Reload the ClientApps
+func (c *Core[B]) PrepareClientApps() error {
 	var (
 		err           error
 		newClientApps map[string]clients.ClientConf
