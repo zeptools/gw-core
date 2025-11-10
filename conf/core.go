@@ -210,7 +210,7 @@ func (c *Core[B]) PrepareKVDBClient() error {
 }
 
 func (c *Core[B]) LoadSQLDBConfs() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".sql.json")
+	confFilePath := filepath.Join(c.AppRoot, "config", ".sql-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
