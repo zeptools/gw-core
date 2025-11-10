@@ -184,7 +184,7 @@ func (c *Core[B]) PrepareKVDatabase() error {
 }
 
 func (c *Core[B]) LoadKVDBConf() error {
-	confFilePath := filepath.Join(c.AppRoot, "config", "databases", ".kv.json")
+	confFilePath := filepath.Join(c.AppRoot, "config", ".kv-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
