@@ -45,7 +45,7 @@ type Core[B comparable] struct {
 	WebService          *web.Service                                     `json:"-"`          // PrepareWebService()
 	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"`          // PrepareThrottleBucketStore()
 	VolatileKV          *sync.Map                                        `json:"-"`          // map[string]string
-	SessionLocks        *sync.Map                                        `json:"-"`          // map[string]*sync.Mutex
+	SessionLocks        *sync.Map                                        `json:"-"`          // map[string]*sync.Mutex for ServiceSessions and WebSessions
 	ActionLocks         *sync.Map                                        `json:"-"`          // map[string]struct{}
 	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf()
 	BackendHttpClient   *http.Client                                     `json:"-"`          // for requests to external apis
