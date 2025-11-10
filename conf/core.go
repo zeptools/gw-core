@@ -50,9 +50,9 @@ type Core[B comparable] struct {
 	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf()
 	BackendHttpClient   *http.Client                                     `json:"-"`          // for requests to external apis
 	KVDBConf            kvdb.Conf                                        `json:"-"`          // LoadKVDBConf()
-	KVDBClient          kvdb.Client                                      `json:"-"`          // PrepareKVDBClient()
+	BackendKVDBClient   kvdb.Client                                      `json:"-"`          // PrepareKVDBClient()
 	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
-	SQLDBClients        map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
+	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
 	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
 	WebLoginSessionConf login.WebLoginSessionConf                        `json:"-"`          // PrepareWebLoginSessions()
 
@@ -201,8 +201,8 @@ func (c *Core[B]) LoadKVDBConf() error {
 func (c *Core[B]) PrepareKVDBClient() error {
 	switch c.KVDBConf.Type {
 	case "redis":
-		c.KVDBClient = &redis.Client{Conf: &c.KVDBConf}
-		if err := c.KVDBClient.Init(); err != nil {
+		c.BackendKVDBClient = &redis.Client{Conf: &c.KVDBConf}
+		if err := c.BackendKVDBClient.Init(); err != nil {
 			return err
 		}
 	// case "memcached"
@@ -228,7 +228,7 @@ func (c *Core[B]) LoadSQLDBConfs() error {
 // PrepareSQLDBClients - Build & Init SQL DB Clients
 // Use after LoadSQLDBConfs
 func (c *Core[B]) PrepareSQLDBClients() error {
-	c.SQLDBClients = make(map[string]sqldb.Client)
+	c.BackendSQLDBClients = make(map[string]sqldb.Client)
 
 	// Registering Supported Implementations
 	pgsql.Register()
@@ -243,7 +243,7 @@ func (c *Core[B]) PrepareSQLDBClients() error {
 		if err = dbClient.Init(); err != nil {
 			return err
 		}
-		c.SQLDBClients[dbName] = dbClient
+		c.BackendSQLDBClients[dbName] = dbClient
 	}
 	return nil
 }
@@ -350,12 +350,12 @@ func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
 	// ToDo: factor out this
-	if c.KVDBClient != nil {
-		if err := c.KVDBClient.Close(); err != nil {
+	if c.BackendKVDBClient != nil {
+		if err := c.BackendKVDBClient.Close(); err != nil {
 			log.Println("[ERROR] Failed to close KV database client")
 		}
 	}
-	for name, sqlDBClient := range c.SQLDBClients {
+	for name, sqlDBClient := range c.BackendSQLDBClients {
 		dbType := sqlDBClient.Conf().Type
 		log.Printf("[INFO][%s] Closing %q SQL DB client", dbType, name)
 		err := sqlDBClient.Close()
