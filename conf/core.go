@@ -26,6 +26,7 @@ import (
 	"github.com/zeptools/gw-core/throttle"
 	"github.com/zeptools/gw-core/uds"
 	"github.com/zeptools/gw-core/web"
+	"github.com/zeptools/gw-core/web/login"
 )
 
 // Core - common config
@@ -51,7 +52,8 @@ type Core[B comparable] struct {
 	KVDBClient          kvdb.Client                                      `json:"-"` // PrepareKVDBClient()
 	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"` // LoadSQLDBConfs()
 	SQLDBClients        map[string]sqldb.Client                          `json:"-"` // PrepareSQLDBClients()
-	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"` // [Hot Reload] Registered Client Apps {client_id: clientConf}
+	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"` // [Hot Reload] PrepareClientApps()
+	WebLoginSessionConf login.WebLoginSessionConf                        `json:"-"` // PrepareWebLoginSessions()
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -322,6 +324,18 @@ func (c *Core[B]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 	conf, ok := (*confMapPtr)[id]
 	conf.ID = id
 	return conf, ok
+}
+
+func (c *Core[B]) PrepareWebLoginSessions() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".web-login-session.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(confBytes, &c.WebLoginSessionConf); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Core[B]) ResourceCleanUp() {
