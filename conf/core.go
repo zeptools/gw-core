@@ -42,19 +42,19 @@ type Core[B comparable] struct {
 	RootCancel          context.CancelFunc                               `json:"-"`          // CancelFunc for RootCtx
 	UDSService          *uds.Service                                     `json:"-"`          // PrepareUDSService()
 	JobScheduler        *schedjobs.Scheduler                             `json:"-"`          // PrepareJobScheduler()
-	WebService          *web.Service                                     `json:"-"`
-	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"` // PrepareThrottleBucketStore()
-	VolatileKV          *sync.Map                                        `json:"-"` // map[string]string
-	SessionLocks        *sync.Map                                        `json:"-"` // map[string]*sync.Mutex
-	ActionLocks         *sync.Map                                        `json:"-"` // map[string]struct{}
-	StorageConf         storages.Conf                                    `json:"-"` // LoadStorageConf()
-	HttpClient          *http.Client                                     `json:"-"` // for requests to external apis
-	KVDBConf            kvdb.Conf                                        `json:"-"` // LoadKVDBConf()
-	KVDBClient          kvdb.Client                                      `json:"-"` // PrepareKVDBClient()
-	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"` // LoadSQLDBConfs()
-	SQLDBClients        map[string]sqldb.Client                          `json:"-"` // PrepareSQLDBClients()
-	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"` // [Hot Reload] PrepareClientApps()
-	WebLoginSessionConf login.WebLoginSessionConf                        `json:"-"` // PrepareWebLoginSessions()
+	WebService          *web.Service                                     `json:"-"`          // PrepareWebService()
+	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"`          // PrepareThrottleBucketStore()
+	VolatileKV          *sync.Map                                        `json:"-"`          // map[string]string
+	SessionLocks        *sync.Map                                        `json:"-"`          // map[string]*sync.Mutex
+	ActionLocks         *sync.Map                                        `json:"-"`          // map[string]struct{}
+	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf()
+	BackendHttpClient   *http.Client                                     `json:"-"`          // for requests to external apis
+	KVDBConf            kvdb.Conf                                        `json:"-"`          // LoadKVDBConf()
+	KVDBClient          kvdb.Client                                      `json:"-"`          // PrepareKVDBClient()
+	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
+	SQLDBClients        map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
+	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
+	WebLoginSessionConf login.WebLoginSessionConf                        `json:"-"`          // PrepareWebLoginSessions()
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -87,7 +87,7 @@ func (c *Core[B]) BaseInit(appRoot string, rootCtx context.Context, rootCancel c
 func (c *Core[B]) prepareDefaultFeatures() {
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
-	c.HttpClient = &http.Client{}
+	c.BackendHttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
 }
 
