@@ -8,15 +8,15 @@ import (
 	"github.com/zeptools/gw-core/web/session"
 )
 
-func (c *Core[B]) WebSessionIDToKVDBKey(sessionID string) string {
+func (c *Core[B, U]) WebSessionIDToKVDBKey(sessionID string) string {
 	return c.AppName + "_wsession:" + sessionID
 }
 
-func (c *Core[B]) FindWebSessionInKVDB(ctx context.Context, sessionID string) (bool, error) {
+func (c *Core[B, U]) FindWebSessionInKVDB(ctx context.Context, sessionID string) (bool, error) {
 	return c.BackendKVDBClient.Exists(ctx, c.WebSessionIDToKVDBKey(sessionID))
 }
 
-func (c *Core[B]) CheckWebSessionFromCookie(ctx context.Context, r *http.Request) bool {
+func (c *Core[B, U]) CheckWebSessionFromCookie(ctx context.Context, r *http.Request) bool {
 	webSessionCookie, err := r.Cookie(session.CookieName)
 	if err != nil {
 		return false
@@ -32,7 +32,7 @@ func (c *Core[B]) CheckWebSessionFromCookie(ctx context.Context, r *http.Request
 	return found
 }
 
-func (c *Core[B]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string) error {
+func (c *Core[B, U]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string) error {
 	encWebSessionId, err := c.WebSessionConf.Cipher.EncryptEncode([]byte(webSessionId))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt web login session id. %v", err)
@@ -50,7 +50,7 @@ func (c *Core[B]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string
 	return nil
 }
 
-func (c *Core[B]) RemoveWebSessionCookie(w http.ResponseWriter) {
+func (c *Core[B, U]) RemoveWebSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     session.CookieName,
 		Path:     "/",
