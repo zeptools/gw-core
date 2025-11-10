@@ -310,6 +310,18 @@ func (c *Core[B]) newClientsConfMapFromFile() (map[string]clients.ClientConf, er
 	return clientsMap, nil
 }
 
+// GetClientConf reads a clients.ClientConf
+// Uses a single atomic cpu instruction
+func (c *Core[B]) GetClientConf(id string) (clients.ClientConf, bool) {
+	clientsConfMapPtr := c.ClientApps.Load()
+	if clientsConfMapPtr == nil {
+		return clients.ClientConf{}, false
+	}
+	clientConf, ok := (*clientsConfMapPtr)[id]
+	clientConf.ID = id
+	return clientConf, ok
+}
+
 func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
