@@ -1,4 +1,4 @@
-package login
+package websessions
 
 import "github.com/zeptools/gw-core/security"
 
