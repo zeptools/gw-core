@@ -27,7 +27,7 @@ import (
 	"github.com/zeptools/gw-core/throttle"
 	"github.com/zeptools/gw-core/uds"
 	"github.com/zeptools/gw-core/web"
-	"github.com/zeptools/gw-core/web/websessions"
+	"github.com/zeptools/gw-core/web/websession"
 )
 
 // Core - common config
@@ -54,7 +54,7 @@ type Core[B comparable] struct {
 	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
 	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
 	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
-	WebLoginSessionConf websessions.WebLoginSessionConf                  `json:"-"`          // PrepareWebLoginSessions()
+	WebLoginSessionConf websession.WebLoginSessionConf                   `json:"-"`          // PrepareWebLoginSessions()
 
 	services []svc.Service // Services to Manage
 	done     chan error

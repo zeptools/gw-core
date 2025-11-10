@@ -1,4 +1,4 @@
-package websessions
+package websession
 
 import "github.com/zeptools/gw-core/security"
 
