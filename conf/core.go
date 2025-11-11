@@ -343,7 +343,7 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 	if err != nil {
 		log.Fatalf("failed to create the session cipher. %v", err)
 	}
-	mgr.Conf.Cipher = cipher
+	mgr.Cipher = cipher
 	c.WebSessionManager = mgr
 	return nil
 }
