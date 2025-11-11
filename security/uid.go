@@ -1,5 +1,5 @@
 package security
 
-type AuthUserID interface {
+type AuthUserIDType interface {
 	~int64 | ~string
 }
