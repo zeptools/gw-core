@@ -329,7 +329,9 @@ func (c *Core[B, U]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 	return conf, ok
 }
 
-// PrepareWebSessions - requires the Backend KVDB Client ready
+// PrepareWebSessions prepares WebSessionManager
+// Prerequisite: BackendKVDBClient
+// Prerequisite: SessionLocks
 func (c *Core[B, U]) PrepareWebSessions() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".web-session.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
@@ -337,11 +339,15 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 		return err
 	}
 	if c.BackendKVDBClient == nil {
-		return errors.New("backend KVDB client is not ready")
+		return errors.New("backend KVDB client not ready")
+	}
+	if c.SessionLocks == nil {
+		return errors.New("sessionlocks not ready")
 	}
 	mgr := &session.Manager{
 		AppName:           c.AppName,
 		BackendKVDBClient: c.BackendKVDBClient,
+		SessionLocks:      c.SessionLocks,
 	}
 	if err = json.Unmarshal(confBytes, &mgr.Conf); err != nil {
 		return err
