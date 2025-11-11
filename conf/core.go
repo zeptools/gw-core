@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/zeptools/gw-core/clients"
-	"github.com/zeptools/gw-core/constraints"
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/db/kvdb/impls/redis"
 	"github.com/zeptools/gw-core/db/sqldb"
@@ -34,8 +33,7 @@ import (
 
 // Core - common config
 // B = Throttle BucketID Type _ e.g. string, int64, etc
-// U = UserIDStr Type _ e.g. int64, string
-type Core[B comparable, U constraints.UID] struct {
+type Core[B comparable] struct {
 	AppName             string                                           `json:"app_name"`
 	Listen              string                                           `json:"listen"`     // HTTP Server Listen IP:PORT Address
 	Host                string                                           `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
@@ -68,7 +66,7 @@ type Core[B comparable, U constraints.UID] struct {
 // 2. load config/.core.json file
 // 3. prepare base fields
 // 4. Start ShutdownSignalListener
-func (c *Core[B, U]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
+func (c *Core[B]) BaseInit(appRoot string, rootCtx context.Context, rootCancel context.CancelFunc) error {
 	c.AppRoot = appRoot
 	// Load .env.json
 	envFilePath := filepath.Join(appRoot, "config", ".core.json")
@@ -87,20 +85,20 @@ func (c *Core[B, U]) BaseInit(appRoot string, rootCtx context.Context, rootCance
 	return nil
 }
 
-func (c *Core[B, U]) prepareDefaultFeatures() {
+func (c *Core[B]) prepareDefaultFeatures() {
 	c.VolatileKV = &sync.Map{}
 	c.SessionLocks = &sync.Map{}
 	c.BackendHttpClient = &http.Client{}
 	c.ActionLocks = &sync.Map{}
 }
 
-func (c *Core[B, U]) AddService(s svc.Service) {
+func (c *Core[B]) AddService(s svc.Service) {
 	log.Printf("[INFO] adding service: %s", s.Name())
 	c.services = append(c.services, s)
 	log.Printf("[INFO] total services: %d", len(c.services))
 }
 
-func (c *Core[B, U]) StartServices() error {
+func (c *Core[B]) StartServices() error {
 	c.done = make(chan error, len(c.services))
 	for _, s := range c.services {
 		err := s.Start()
@@ -115,7 +113,7 @@ func (c *Core[B, U]) StartServices() error {
 	return nil
 }
 
-func (c *Core[B, U]) WaitServicesDone() error {
+func (c *Core[B]) WaitServicesDone() error {
 	for i := 0; i < len(c.services); i++ {
 		if err := <-c.done; err != nil {
 			return err
@@ -124,7 +122,7 @@ func (c *Core[B, U]) WaitServicesDone() error {
 	return nil
 }
 
-func (c *Core[B, U]) StopServices() {
+func (c *Core[B]) StopServices() {
 	for _, s := range c.services {
 		s.Stop()
 	}
@@ -132,7 +130,7 @@ func (c *Core[B, U]) StopServices() {
 
 var once sync.Once
 
-func (c *Core[B, U]) startShutdownSignalListener() {
+func (c *Core[B]) startShutdownSignalListener() {
 	once.Do(func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -145,27 +143,27 @@ func (c *Core[B, U]) startShutdownSignalListener() {
 	log.Printf("[INFO][CORE] shutdown signal listener started")
 }
 
-func (c *Core[B, U]) PrepareJobScheduler() {
+func (c *Core[B]) PrepareJobScheduler() {
 	c.JobScheduler = schedjobs.NewScheduler(c.RootCtx)
 	c.AddService(c.JobScheduler)
 }
 
-func (c *Core[B, U]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
+func (c *Core[B]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
 	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdMap)
 	c.AddService(c.UDSService)
 }
 
-func (c *Core[B, U]) PrepareWebService(addr string, router http.Handler) {
+func (c *Core[B]) PrepareWebService(addr string, router http.Handler) {
 	c.WebService = web.NewService(c.RootCtx, addr, router)
 	c.AddService(c.WebService)
 }
 
-func (c *Core[B, U]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
+func (c *Core[B]) PrepareThrottleBucketStore(cleanupCycle time.Duration, cleanupOlderThan time.Duration) {
 	c.ThrottleBucketStore = throttle.NewBucketStore[B](c.RootCtx, cleanupCycle, cleanupOlderThan)
 	c.AddService(c.ThrottleBucketStore)
 }
 
-func (c *Core[B, U]) LoadStorageConf() error {
+func (c *Core[B]) LoadStorageConf() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".storages.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -177,7 +175,7 @@ func (c *Core[B, U]) LoadStorageConf() error {
 	return nil
 }
 
-func (c *Core[B, U]) PrepareKVDatabase() error {
+func (c *Core[B]) PrepareKVDatabase() error {
 	// Load KV Database Config File
 	err := c.LoadKVDBConf()
 	if err != nil {
@@ -189,7 +187,7 @@ func (c *Core[B, U]) PrepareKVDatabase() error {
 	return nil
 }
 
-func (c *Core[B, U]) LoadKVDBConf() error {
+func (c *Core[B]) LoadKVDBConf() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".kv-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -201,7 +199,7 @@ func (c *Core[B, U]) LoadKVDBConf() error {
 	return nil
 }
 
-func (c *Core[B, U]) PrepareKVDBClient() error {
+func (c *Core[B]) PrepareKVDBClient() error {
 	switch c.KVDBConf.Type {
 	case "redis":
 		c.BackendKVDBClient = &redis.Client{Conf: &c.KVDBConf}
@@ -215,7 +213,7 @@ func (c *Core[B, U]) PrepareKVDBClient() error {
 	return nil
 }
 
-func (c *Core[B, U]) LoadSQLDBConfs() error {
+func (c *Core[B]) LoadSQLDBConfs() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".sql-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -230,7 +228,7 @@ func (c *Core[B, U]) LoadSQLDBConfs() error {
 
 // PrepareSQLDBClients - Build & Init SQL DB Clients
 // Use after LoadSQLDBConfs
-func (c *Core[B, U]) PrepareSQLDBClients() error {
+func (c *Core[B]) PrepareSQLDBClients() error {
 	c.BackendSQLDBClients = make(map[string]sqldb.Client)
 
 	// Registering Supported Implementations
@@ -252,7 +250,7 @@ func (c *Core[B, U]) PrepareSQLDBClients() error {
 }
 
 // PrepareSQLDatabases for SQL DB Clients & RawSQL Stores, etc
-func (c *Core[B, U]) PrepareSQLDatabases(ensureImports func()) error {
+func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 	// Load SQL Databases Config File
 	err := c.LoadSQLDBConfs()
 	if err != nil {
@@ -293,7 +291,7 @@ func (c *Core[B, U]) PrepareSQLDatabases(ensureImports func()) error {
 // PrepareClientApps prepares ClientApps
 // building a new clients.ClientAppConf map and swaps the atomic pointer for the ClientApps
 // So, this can be invoked to Hot-Reload the ClientApps
-func (c *Core[B, U]) PrepareClientApps() error {
+func (c *Core[B]) PrepareClientApps() error {
 	var (
 		err           error
 		newClientApps map[string]clients.ClientAppConf
@@ -305,7 +303,7 @@ func (c *Core[B, U]) PrepareClientApps() error {
 	return nil
 }
 
-func (c *Core[B, U]) newClientAppsConfMapFromFile() (map[string]clients.ClientAppConf, error) {
+func (c *Core[B]) newClientAppsConfMapFromFile() (map[string]clients.ClientAppConf, error) {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".clients.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -320,7 +318,7 @@ func (c *Core[B, U]) newClientAppsConfMapFromFile() (map[string]clients.ClientAp
 
 // GetClientAppConf reads a clients.ClientAppConf
 // Uses a single atomic cpu instruction
-func (c *Core[B, U]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
+func (c *Core[B]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 	confMapPtr := c.ClientApps.Load()
 	if confMapPtr == nil {
 		return clients.ClientAppConf{}, false
@@ -333,7 +331,7 @@ func (c *Core[B, U]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 // PrepareWebSessions prepares WebSessionManager
 // Prerequisite: BackendKVDBClient
 // Prerequisite: SessionLocks
-func (c *Core[B, U]) PrepareWebSessions() error {
+func (c *Core[B]) PrepareWebSessions() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".web-session.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -364,7 +362,7 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 	return nil
 }
 
-func (c *Core[B, U]) ResourceCleanUp() {
+func (c *Core[B]) ResourceCleanUp() {
 	log.Println("[INFO] App Resource Cleaning Up...")
 	// Clean up DB clients ----
 	// ToDo: factor out this
