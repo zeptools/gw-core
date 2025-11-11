@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/zeptools/gw-core/apis/mainbackend"
 	"github.com/zeptools/gw-core/clients"
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/db/kvdb/impls/redis"
@@ -50,12 +51,13 @@ type Core[B comparable] struct {
 	ActionLocks         *sync.Map                                        `json:"-"`          // map[string]struct{}
 	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf()
 	BackendHttpClient   *http.Client                                     `json:"-"`          // for requests to external apis
-	KVDBConf            kvdb.Conf                                        `json:"-"`          // LoadKVDBConf()
-	BackendKVDBClient   kvdb.Client                                      `json:"-"`          // PrepareKVDBClient()
-	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
-	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
+	KVDBConf            kvdb.Conf                                        `json:"-"`          // loadKVDBConf()
+	BackendKVDBClient   kvdb.Client                                      `json:"-"`          // prepareKVDBClient()
+	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // loadSQLDBConfs()
+	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // prepareSQLDBClients()
 	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
 	WebSessionManager   *session.Manager                                 `json:"-"`          // PrepareWebSessions()
+	MainBackendClient   *mainbackend.Client                              `json:"-"`          // PrepareMainBackendClient()
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -177,17 +179,17 @@ func (c *Core[B]) LoadStorageConf() error {
 
 func (c *Core[B]) PrepareKVDatabase() error {
 	// Load KV Database Config File
-	err := c.LoadKVDBConf()
+	err := c.loadKVDBConf()
 	if err != nil {
 		return err
 	}
-	if err = c.PrepareKVDBClient(); err != nil {
+	if err = c.prepareKVDBClient(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Core[B]) LoadKVDBConf() error {
+func (c *Core[B]) loadKVDBConf() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".kv-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -199,7 +201,7 @@ func (c *Core[B]) LoadKVDBConf() error {
 	return nil
 }
 
-func (c *Core[B]) PrepareKVDBClient() error {
+func (c *Core[B]) prepareKVDBClient() error {
 	switch c.KVDBConf.Type {
 	case "redis":
 		c.BackendKVDBClient = &redis.Client{Conf: &c.KVDBConf}
@@ -213,7 +215,7 @@ func (c *Core[B]) PrepareKVDBClient() error {
 	return nil
 }
 
-func (c *Core[B]) LoadSQLDBConfs() error {
+func (c *Core[B]) loadSQLDBConfs() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".sql-databases.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
@@ -226,9 +228,9 @@ func (c *Core[B]) LoadSQLDBConfs() error {
 	return nil
 }
 
-// PrepareSQLDBClients - Build & Init SQL DB Clients
-// Use after LoadSQLDBConfs
-func (c *Core[B]) PrepareSQLDBClients() error {
+// prepareSQLDBClients - Build & Init SQL DB Clients
+// Use after loadSQLDBConfs
+func (c *Core[B]) prepareSQLDBClients() error {
 	c.BackendSQLDBClients = make(map[string]sqldb.Client)
 
 	// Registering Supported Implementations
@@ -252,7 +254,7 @@ func (c *Core[B]) PrepareSQLDBClients() error {
 // PrepareSQLDatabases for SQL DB Clients & RawSQL Stores, etc
 func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 	// Load SQL Databases Config File
-	err := c.LoadSQLDBConfs()
+	err := c.loadSQLDBConfs()
 	if err != nil {
 		return err
 	}
@@ -265,7 +267,7 @@ func (c *Core[B]) PrepareSQLDatabases(ensureImports func()) error {
 	}
 
 	// Prepare SQL DB Clients
-	if err = c.PrepareSQLDBClients(); err != nil {
+	if err = c.prepareSQLDBClients(); err != nil {
 		return err
 	}
 
@@ -359,6 +361,26 @@ func (c *Core[B]) PrepareWebSessions() error {
 	mgr.Cipher = cipher
 
 	c.WebSessionManager = mgr
+	return nil
+}
+
+// PrepareMainBackendClient to Send Request to the Main Backend API if any
+// Prerequisite: BackendHttpClient
+func (c *Core[B]) PrepareMainBackendClient() error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".main-backend-api.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	if c.BackendHttpClient == nil {
+		return errors.New("backend http client not ready")
+	}
+	c.MainBackendClient = &mainbackend.Client{
+		Client: c.BackendHttpClient,
+	}
+	if err = json.Unmarshal(confBytes, &c.MainBackendClient.Conf); err != nil {
+		return err
+	}
 	return nil
 }
 
