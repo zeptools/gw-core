@@ -79,9 +79,9 @@ func (c *Client) JWKSFileResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// requestJSON sends a request and returns the response.
+// RequestJSON sends a request and returns the response.
 // The caller is responsible for closing response.Body.
-func (c *Client) requestJSON(ctx context.Context, accessToken string, method string, endpoint string) (*http.Response, error) {
+func (c *Client) RequestJSON(ctx context.Context, accessToken string, method string, endpoint string) (*http.Response, error) {
 	upstrUrl := c.Conf.Host + endpoint
 	upstrReq, err := http.NewRequestWithContext(ctx, method, upstrUrl, nil)
 	if err != nil {
