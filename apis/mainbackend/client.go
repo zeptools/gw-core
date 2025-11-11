@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json/v2"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -50,4 +51,30 @@ func (c *Client) GetJWKS(ctx context.Context) (*security.JWKS, error) {
 		return nil, err
 	}
 	return &jwks, nil
+}
+
+func (c *Client) JWKSFileResponse(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	upstrRes, err := c.RequestJWKS(ctx) // *http.Response
+	if err != nil {
+		responses.WriteSimpleErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("%v", err))
+		return
+	}
+	if upstrRes.StatusCode == http.StatusNotFound {
+		// 404 not found -> raw error message sent before wrapped into JSON
+		responses.WriteSimpleErrorJSON(w, http.StatusNotFound, fmt.Sprintf("%v", responses.HTTPErrorNotFound))
+		return
+	}
+	defer func() {
+		if closeErr := upstrRes.Body.Close(); closeErr != nil {
+			log.Printf("[WARN] %v", closeErr)
+		}
+	}()
+	w.Header().Set("Content-Type", "application/jwk-set+json")
+	w.WriteHeader(upstrRes.StatusCode)
+	_, err = io.Copy(w, upstrRes.Body)
+	if err != nil {
+		responses.WriteSimpleErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("%v", err))
+		return
+	}
 }
