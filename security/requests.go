@@ -6,9 +6,9 @@ type AuthRequestBody struct {
 	RedirectURI  string `json:"redirect_uri"` // Required for Security Check. RFC 6749 §4.1.3
 }
 
-type ReissueAccessTokenRequestBody[U AuthUserID] struct {
+type ReissueAccessTokenRequestBody struct {
 	RefreshToken string `json:"refresh_token"`
-	UID          U      `json:"uid"` // Optional for Double-Checking
+	UserIDStr    string `json:"uid"` // Optional for Double-Checking
 }
 
 func ExtractBearerToken(header string) string {

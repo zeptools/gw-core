@@ -31,14 +31,14 @@ func GenerateOpaqueAccessRefreshTokenPair(byteLength int) (string, string, error
 }
 
 type RefreshInfo struct {
-	UserID     int
 	ClientID   string
 	ValidUntil int64  // Hardcap. [NOTE] Existence = at least in the Expiration Sliding Window
 	AccessHash string // Hash of the access_token issued together
+	UserIDStr  string // Optional for Double-Checking
 }
 
 func (i RefreshInfo) String() string {
-	return fmt.Sprintf("%d:%s:%d:%s", i.UserID, i.ClientID, i.ValidUntil, i.AccessHash)
+	return fmt.Sprintf("%s:%s:%d:%s", i.UserIDStr, i.ClientID, i.ValidUntil, i.AccessHash)
 }
 
 func ParseRefreshInfo(s string) (*RefreshInfo, error) {
@@ -46,16 +46,12 @@ func ParseRefreshInfo(s string) (*RefreshInfo, error) {
 	if len(segs) != 4 {
 		return nil, fmt.Errorf("invalid refresh info format")
 	}
-	uid, err := strconv.Atoi(segs[0])
-	if err != nil {
-		return nil, err
-	}
 	validUntil, err := strconv.ParseInt(segs[2], 10, 64)
 	if err != nil {
 		return nil, err
 	}
 	return &RefreshInfo{
-		UserID:     uid,
+		UserIDStr:  segs[0],
 		ClientID:   segs[1],
 		ValidUntil: validUntil,
 		AccessHash: segs[3],
