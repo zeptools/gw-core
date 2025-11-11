@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json/v2"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -328,14 +329,19 @@ func (c *Core[B, U]) GetClientAppConf(id string) (clients.ClientAppConf, bool) {
 	return conf, ok
 }
 
+// PrepareWebSessions - requires the Backend KVDB Client ready
 func (c *Core[B, U]) PrepareWebSessions() error {
 	confFilePath := filepath.Join(c.AppRoot, "config", ".web-session.json")
 	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
 	if err != nil {
 		return err
 	}
+	if c.BackendKVDBClient == nil {
+		return errors.New("backend KVDB client is not ready")
+	}
 	mgr := &session.Manager{
-		AppName: c.AppName,
+		AppName:           c.AppName,
+		BackendKVDBClient: c.BackendKVDBClient,
 	}
 	if err = json.Unmarshal(confBytes, &mgr.Conf); err != nil {
 		return err
@@ -343,10 +349,10 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 	// Web Login Session Cipher
 	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(mgr.Conf.EncryptionKey))
 	if err != nil {
-		log.Fatalf("failed to create the session cipher. %v", err)
+		return fmt.Errorf("NewXChaCha20Poly1305Cipher: %v", err)
 	}
 	mgr.Cipher = cipher
-	mgr.BackendKVDBClient = c.BackendKVDBClient
+
 	c.WebSessionManager = mgr
 	return nil
 }
