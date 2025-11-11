@@ -1,6 +1,7 @@
 package mainbackend
 
 import (
+	"bytes"
 	"context"
 	"encoding/json/v2"
 	"fmt"
@@ -98,4 +99,45 @@ func (c *Client) RequestJSON(ctx context.Context, accessToken string, method str
 		return nil, err
 	}
 	return upstrRes, nil
+}
+
+// RequestReissueAccessTokenWithRefreshToken requests the MainBackend to reissue access token only with refresh token
+func (c *Client) RequestReissueAccessTokenWithRefreshToken(ctx context.Context, refreshToken string) (*http.Response, error) {
+	upstrURL := c.Conf.Host + c.Conf.ReissueAccessTokenEndpoint
+	upstrReqBody := security.ReissueAccessTokenRequestBody{
+		RefreshToken: refreshToken,
+	}
+	upstrReqBodyBytes, err := json.Marshal(upstrReqBody)
+	if err != nil {
+		return nil, err
+	}
+	upstrReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstrURL, bytes.NewReader(upstrReqBodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	upstrReq.Header.Set("Client-Id", c.Conf.ClientID)
+	upstrReq.Header.Set("Content-Type", "application/json")
+	upstrReq.Header.Set("Accept", "application/json")
+	return c.Do(upstrReq)
+}
+
+// RequestReissueAccessTokenWithRefreshTokenAndUserID requests the MainBackend to reissue access token with refresh token and user id
+func (c *Client) RequestReissueAccessTokenWithRefreshTokenAndUserID(ctx context.Context, refreshToken string, userIDStr string) (*http.Response, error) {
+	upstrURL := c.Conf.Host + c.Conf.ReissueAccessTokenEndpoint
+	upstrReqBody := security.ReissueAccessTokenRequestBody{
+		RefreshToken: refreshToken,
+		UserIDStr:    userIDStr,
+	}
+	upstrReqBodyBytes, err := json.Marshal(upstrReqBody)
+	if err != nil {
+		return nil, err
+	}
+	upstrReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstrURL, bytes.NewReader(upstrReqBodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	upstrReq.Header.Set("Client-Id", c.Conf.ClientID)
+	upstrReq.Header.Set("Content-Type", "application/json")
+	upstrReq.Header.Set("Accept", "application/json")
+	return c.Do(upstrReq)
 }
