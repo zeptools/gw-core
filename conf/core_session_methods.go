@@ -21,7 +21,7 @@ func (c *Core[B, U]) CheckWebSessionFromCookie(ctx context.Context, r *http.Requ
 	if err != nil {
 		return false
 	}
-	webSessionId, err := c.WebSessionConf.Cipher.DecodeDecrypt(webSessionCookie.Value) // []byte
+	webSessionId, err := c.WebSessionManager.Conf.Cipher.DecodeDecrypt(webSessionCookie.Value) // []byte
 	if err != nil {
 		return false
 	}
@@ -33,7 +33,7 @@ func (c *Core[B, U]) CheckWebSessionFromCookie(ctx context.Context, r *http.Requ
 }
 
 func (c *Core[B, U]) SetWebSessionCookie(w http.ResponseWriter, webSessionId string) error {
-	encWebSessionId, err := c.WebSessionConf.Cipher.EncryptEncode([]byte(webSessionId))
+	encWebSessionId, err := c.WebSessionManager.Conf.Cipher.EncryptEncode([]byte(webSessionId))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt web login session id. %v", err)
 	}
@@ -44,7 +44,7 @@ func (c *Core[B, U]) SetWebSessionCookie(w http.ResponseWriter, webSessionId str
 		// Domain: // Cannot be set with `__Host-`
 		HttpOnly: true, // JS cannot read it
 		Secure:   true, // only sent over HTTPS
-		MaxAge:   c.WebSessionConf.ExpireHardcap,
+		MaxAge:   c.WebSessionManager.Conf.ExpireHardcap,
 		SameSite: http.SameSiteLaxMode,
 	})
 	return nil

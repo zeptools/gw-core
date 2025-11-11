@@ -55,7 +55,7 @@ type Core[B comparable, U comparable] struct {
 	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // LoadSQLDBConfs()
 	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // PrepareSQLDBClients()
 	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
-	WebSessionConf      session.Conf                                     `json:"-"`          // PrepareWebSessions()
+	WebSessionManager   *session.Manager                                 `json:"-"`          // PrepareWebSessions()
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -334,16 +334,17 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(confBytes, &c.WebSessionConf); err != nil {
+	mgr := &session.Manager{}
+	if err = json.Unmarshal(confBytes, &mgr.Conf); err != nil {
 		return err
 	}
 	// Web Login Session Cipher
-	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(c.WebSessionConf.EncryptionKey))
+	cipher, err := security.NewXChaCha20Poly1305CipherBase64([]byte(mgr.Conf.EncryptionKey))
 	if err != nil {
 		log.Fatalf("failed to create the session cipher. %v", err)
 	}
-	c.WebSessionConf.Cipher = cipher
-
+	mgr.Conf.Cipher = cipher
+	c.WebSessionManager = mgr
 	return nil
 }
 
