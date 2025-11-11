@@ -346,6 +346,7 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 		log.Fatalf("failed to create the session cipher. %v", err)
 	}
 	mgr.Cipher = cipher
+	mgr.BackendKVDBClient = c.BackendKVDBClient
 	c.WebSessionManager = mgr
 	return nil
 }
