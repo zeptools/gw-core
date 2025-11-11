@@ -10,6 +10,7 @@ import (
 
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/security"
+	"github.com/zeptools/gw-core/web/session/login"
 )
 
 type Manager struct {
@@ -74,7 +75,7 @@ func (m *Manager) RemoveWebSessionCookie(w http.ResponseWriter) {
 }
 
 // CreateWebLoginSession creates a Session in Key-value Database and Returns its Session ID
-func (m *Manager) CreateWebLoginSession(ctx context.Context, accessToken string, refreshToken string, uid int64) (string, error) {
+func (m *Manager) CreateWebLoginSession(ctx context.Context, accessToken string, refreshToken string, uidStr string) (string, error) {
 	webSessionID, err := GenerateWebSessionID()
 	if err != nil {
 		return "", err
@@ -84,7 +85,7 @@ func (m *Manager) CreateWebLoginSession(ctx context.Context, accessToken string,
 	if err = m.BackendKVDBClient.SetFields(ctx, key, map[string]any{
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
-		"uid":           uid,
+		"uid":           uidStr,
 	}); err != nil {
 		return "", err
 	}
@@ -101,7 +102,7 @@ func (m *Manager) CreateWebLoginSession(ctx context.Context, accessToken string,
 	}
 
 	if m.Conf.MaxCntPerUser > 0 {
-		usrSessionListKey := fmt.Sprintf("%s_wsessions:%d", m.AppName, uid)
+		usrSessionListKey := fmt.Sprintf("%s_wsessions:%s", m.AppName, uidStr)
 		// SessionList Lock (User Level Lock)
 		mu, _ := m.SessionLocks.LoadOrStore(usrSessionListKey, &sync.Mutex{})
 		mutex := mu.(*sync.Mutex)
@@ -142,4 +143,28 @@ func (m *Manager) CreateWebLoginSession(ctx context.Context, accessToken string,
 	}
 
 	return webSessionID, nil
+}
+
+func (m *Manager) GetWebLoginSessionInfoByKVDBKey(ctx context.Context, key string) (*login.WebLoginSessionInfo, error) {
+	sessionData, err := m.BackendKVDBClient.GetAllFields(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, ok1 := sessionData["access_token"]
+	refreshToken, ok2 := sessionData["refresh_token"]
+	uidStr, ok3 := sessionData["uid"]
+	if !ok1 || !ok2 || !ok3 {
+		return nil, errors.New("invalid session data")
+	}
+	return &login.WebLoginSessionInfo{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		UserIDStr:    uidStr,
+	}, nil
+}
+
+func (m *Manager) GetWebLoginSessionInfoBySessionId(ctx context.Context, sessionId string) (*login.WebLoginSessionInfo, error) {
+	key := m.WebSessionIDToKVDBKey(sessionId)
+	return m.GetWebLoginSessionInfoByKVDBKey(ctx, key)
 }

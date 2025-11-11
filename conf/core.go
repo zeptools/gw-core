@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/zeptools/gw-core/clients"
+	"github.com/zeptools/gw-core/constraints"
 	"github.com/zeptools/gw-core/db/kvdb"
 	"github.com/zeptools/gw-core/db/kvdb/impls/redis"
 	"github.com/zeptools/gw-core/db/sqldb"
@@ -33,8 +34,8 @@ import (
 
 // Core - common config
 // B = Throttle BucketID Type _ e.g. string, int64, etc
-// U = UserID Type _ e.g. int64, string
-type Core[B comparable, U comparable] struct {
+// U = UserIDStr Type _ e.g. int64, string
+type Core[B comparable, U constraints.UID] struct {
 	AppName             string                                           `json:"app_name"`
 	Listen              string                                           `json:"listen"`     // HTTP Server Listen IP:PORT Address
 	Host                string                                           `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
