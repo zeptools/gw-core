@@ -334,7 +334,9 @@ func (c *Core[B, U]) PrepareWebSessions() error {
 	if err != nil {
 		return err
 	}
-	mgr := &session.Manager{}
+	mgr := &session.Manager{
+		AppName: c.AppName,
+	}
 	if err = json.Unmarshal(confBytes, &mgr.Conf); err != nil {
 		return err
 	}
