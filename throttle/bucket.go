@@ -17,13 +17,13 @@ type Bucket[K comparable] struct {
 func (b *Bucket[K]) refill(now time.Time) {
 	conf := b.parentGroup.conf
 	elapsed := now.Sub(b.lastCheck)
-	if elapsed >= conf.Period { // compare
-		times := int(elapsed / conf.Period) // division
+	if elapsed >= conf.IncrPeriod { // compare
+		times := int(elapsed / conf.IncrPeriod) // division
 		b.tokens += times * conf.Increment
 		if b.tokens > conf.Burst {
 			b.tokens = conf.Burst
 		}
-		b.lastCheck = b.lastCheck.Add(time.Duration(times) * conf.Period)
+		b.lastCheck = b.lastCheck.Add(time.Duration(times) * conf.IncrPeriod)
 	}
 }
 
