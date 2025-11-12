@@ -15,28 +15,29 @@ import (
 )
 
 type Service struct {
-	Ctx        context.Context    // Service Context
-	cancel     context.CancelFunc // Service Context CancelFunc
-	state      int                // internal service state
-	done       chan error         // Shutdown Error Channel
-	SocketPath string
-	CmdMap     map[string]CmdHnd
-	listener   net.Listener
+	*CommandStore // [Embedded]
+	SocketPath    string
+	Ctx           context.Context // Service Context
+
+	cancel   context.CancelFunc // Service Context CancelFunc
+	state    int                // internal service state
+	done     chan error         // Shutdown Error Channel
+	listener net.Listener
 }
 
 func (s *Service) Name() string {
 	return "UDSService"
 }
 
-func NewService(parentCtx context.Context, sockPath string, cmdMap map[string]CmdHnd) *Service {
+func NewService(parentCtx context.Context, sockPath string, cmdStore *CommandStore) *Service {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Service{
-		Ctx:        svcCtx,
-		cancel:     svcCancel,
-		state:      svc.StateREADY,
-		done:       make(chan error, 1),
-		SocketPath: sockPath,
-		CmdMap:     cmdMap,
+		Ctx:          svcCtx,
+		cancel:       svcCancel,
+		state:        svc.StateREADY,
+		done:         make(chan error, 1),
+		SocketPath:   sockPath,
+		CommandStore: cmdStore,
 	}
 }
 
@@ -142,18 +143,14 @@ func (s *Service) handleConn(c net.Conn) {
 			return
 		}
 		if cmdStr == "help" {
-			_, _ = fmt.Fprintln(c, "\ncommmands:")
-			for cmdKey, cmdHnd := range s.CmdMap {
-				_, _ = fmt.Fprintf(c, "%-36s %s\n", cmdKey, cmdHnd.Desc)
-			}
-			_, _ = fmt.Fprintln(c)
+			s.CommandStore.PrintHelp(c)
 			continue
 		}
 		// look it up in the command map
-		if cmdHnd, ok := s.CmdMap[cmdStr]; ok {
+		if handler, ok := s.GetHandler(cmdStr); ok {
 			log.Printf("[INFO][UDS] `%s`\n", line)
 			_, _ = fmt.Fprintln(c)
-			if err = cmdHnd.Fn(args[1:], c); err != nil {
+			if err = handler.HandleCommand(args[1:], c); err != nil {
 				_, _ = fmt.Fprintf(c, "ERROR> %v\n", err)
 				log.Printf("[ERROR][UDS] `%s` terminated: %v\n", line, err)
 			} else {

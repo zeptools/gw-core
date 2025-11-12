@@ -150,8 +150,8 @@ func (c *Core[B]) PrepareJobScheduler() {
 	c.AddService(c.JobScheduler)
 }
 
-func (c *Core[B]) PrepareUDSService(sockPath string, cmdMap map[string]uds.CmdHnd) {
-	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdMap)
+func (c *Core[B]) PrepareUDSService(sockPath string, cmdStore *uds.CommandStore) {
+	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdStore)
 	c.AddService(c.UDSService)
 }
 
