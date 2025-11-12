@@ -77,6 +77,15 @@ func (s *CommandStore) Add(cmdGroup *CommandGroup) error {
 	return nil
 }
 
+func (s *CommandStore) AddMany(cmdGroups []*CommandGroup) error {
+	for _, cmdGroup := range cmdGroups {
+		if err := s.Add(cmdGroup); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *CommandStore) GetHandler(cmd string) (CommandHandler, bool) {
 	handler, ok := s.handlerMap[cmd]
 	return handler, ok
