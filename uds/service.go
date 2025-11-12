@@ -160,10 +160,8 @@ func (s *Service) handleConn(c net.Conn) {
 				log.Printf("[INFO][UDS] `%s` completed\n", line)
 			}
 			_, _ = fmt.Fprintln(c)
-			return
 		} else {
 			_, _ = fmt.Fprintf(c, "unknown command: %s\n\n", cmdStr)
-			continue // give another chance
 		}
 	}
 
