@@ -121,3 +121,21 @@ func (s *BucketStore[K]) Allow(groupID string, localBucketID K, now time.Time) b
 	g.SetBucket(localBucketID, g.conf.Burst-1, now)
 	return true
 }
+
+// Inspect returns a snapshot of all group keys and their bucket IDs.
+// It does not lock globally, so results may be slightly inconsistent
+// if buckets are being modified concurrently — which is fine for inspection.
+func (s *BucketStore[K]) Inspect() map[string][]K {
+	result := make(map[string][]K)
+
+	for groupID, bucketGroup := range s.groups {
+		var ids []K
+		bucketGroup.buckets.Range(func(localID, _ any) bool {
+			ids = append(ids, localID.(K))
+			return true
+		})
+		result[groupID] = ids
+	}
+
+	return result
+}
