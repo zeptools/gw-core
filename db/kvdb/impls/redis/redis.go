@@ -47,7 +47,7 @@ func (c *Client) GetConf() *kvdb.Conf {
 	return c.Conf
 }
 
-//--- Group Ops ----
+//--- Key Ops ----
 
 func (c *Client) Exists(ctx context.Context, key string) (bool, error) {
 	n, err := c.internal.Exists(ctx, key).Result()
@@ -61,6 +61,22 @@ func (c *Client) Delete(ctx context.Context, keys ...string) (int64, error) {
 func (c *Client) Expire(ctx context.Context, key string, expiration time.Duration) (bool, error) {
 	// Redis EXPIRE returns true if key existed and TTL was set, false if key does not exist
 	return c.internal.Expire(ctx, key, expiration).Result()
+}
+
+func (c *Client) ScanKeys(ctx context.Context, cursor any, scanBatchSize int) ([]string, any, error) {
+	var cur uint64
+	if cursor != nil {
+		cur = cursor.(uint64)
+	}
+	keys, nextCursor, err := c.internal.Scan(ctx, cur, "*", int64(scanBatchSize)).Result()
+	if err != nil {
+		return nil, nil, err
+	}
+	// Redis returns nextCursor == 0 when the scan is complete.
+	if nextCursor == 0 {
+		return keys, nil, nil
+	}
+	return keys, nextCursor, nil
 }
 
 //---- Single-value Ops ----

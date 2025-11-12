@@ -2,6 +2,7 @@ package kvdb
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -17,6 +18,15 @@ type Client interface {
 	Delete(ctx context.Context, keys ...string) (int64, error)
 	// Expire sets/updates expiration for a key
 	Expire(ctx context.Context, key string, expiration time.Duration) (bool, error) // found & updated, err
+
+	// ScanKeys iterates over keys in the database in batches.
+	// Returns keys []string, nextCurosr any, err error
+	// It attempts to return up to scanBatchSize keys starting from the given cursor.
+	// The exact number of keys returned may vary depending on the backend's scanning behavior.
+	// The cursor type and meaning are backend-specific and opaque to callers.
+	// When nextCursor is nil, the scan is complete.
+	// Backends that do not support key iteration (e.g. Memcached) should return ErrNotSupported.
+	ScanKeys(ctx context.Context, cursor any, scanBatchSize int) ([]string, any, error)
 
 	//---- Single-value Ops ----
 
@@ -43,3 +53,5 @@ type Client interface {
 	RemoveFields(ctx context.Context, key string, fields ...string) (int64, error)
 	GetAllFields(ctx context.Context, key string) (map[string]string, error)
 }
+
+var ErrNotSupported = errors.New("kvdb: operation not supported")
