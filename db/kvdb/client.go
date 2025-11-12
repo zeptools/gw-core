@@ -19,6 +19,9 @@ type Client interface {
 	// Expire sets/updates expiration for a key
 	Expire(ctx context.Context, key string, expiration time.Duration) (bool, error) // found & updated, err
 
+	// Type returns the string representation of the value type stored at the given key.
+	Type(ctx context.Context, key string) (string, error)
+
 	// ScanKeys iterates over keys in the database in batches.
 	// Returns keys []string, nextCurosr any, err error
 	// It attempts to return up to scanBatchSize keys starting from the given cursor.

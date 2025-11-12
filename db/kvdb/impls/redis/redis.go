@@ -63,6 +63,10 @@ func (c *Client) Expire(ctx context.Context, key string, expiration time.Duratio
 	return c.internal.Expire(ctx, key, expiration).Result()
 }
 
+func (c *Client) Type(ctx context.Context, key string) (string, error) {
+	return c.internal.Type(ctx, key).Result()
+}
+
 func (c *Client) ScanKeys(ctx context.Context, cursor any, scanBatchSize int) ([]string, any, error) {
 	var cur uint64
 	if cursor != nil {
