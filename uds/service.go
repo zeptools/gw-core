@@ -113,6 +113,7 @@ func (s *Service) handleConn(c net.Conn) {
 	}()
 
 	defer func() {
+		log.Println("[INFO][UDS] connection closed")
 		if err := c.Close(); err != nil {
 			if !errors.Is(err, net.ErrClosed) { // && !strings.Contains(err.Error(), "use of closed network connection")
 				log.Printf("[ERROR][UDS] closing connection: %v\n", err)
