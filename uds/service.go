@@ -154,6 +154,7 @@ func (s *Service) handleConn(c net.Conn) {
 			log.Printf("[INFO][UDS] `%s`\n", line)
 			_, _ = fmt.Fprintln(c)
 			if err = cmdHnd.Fn(args[1:], c); err != nil {
+				_, _ = fmt.Fprintf(c, "ERROR> %v\n", err)
 				log.Printf("[ERROR][UDS] `%s` terminated: %v\n", line, err)
 			} else {
 				log.Printf("[INFO][UDS] `%s` completed\n", line)
