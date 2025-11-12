@@ -146,17 +146,19 @@ func (s *Service) handleConn(c net.Conn) {
 			for cmdKey, cmdHnd := range s.CmdMap {
 				_, _ = fmt.Fprintf(c, "%-36s %s\n", cmdKey, cmdHnd.Desc)
 			}
-			_, _ = fmt.Fprintln(c, "")
+			_, _ = fmt.Fprintln(c)
 			continue
 		}
 		// look it up in the command map
 		if cmdHnd, ok := s.CmdMap[cmdStr]; ok {
 			log.Printf("[INFO][UDS] `%s`\n", line)
+			_, _ = fmt.Fprintln(c)
 			if err = cmdHnd.Fn(args[1:], c); err != nil {
 				log.Printf("[ERROR][UDS] `%s` terminated: %v\n", line, err)
 			} else {
 				log.Printf("[INFO][UDS] `%s` completed\n", line)
 			}
+			_, _ = fmt.Fprintln(c)
 			return
 		} else {
 			_, _ = fmt.Fprintf(c, "unknown command: %s\n\n", cmdStr)

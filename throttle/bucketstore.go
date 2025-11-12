@@ -122,7 +122,7 @@ func (s *BucketStore[K]) Allow(groupID string, localBucketID K, now time.Time) b
 	return true
 }
 
-// Inspect returns a snapshot of all group keys and their bucket IDs.
+// Inspect returns a snapshot of all BucketGroup IDs and their local Bucket IDs.
 // It does not lock globally, so results may be slightly inconsistent
 // if buckets are being modified concurrently — which is fine for inspection.
 func (s *BucketStore[K]) Inspect() map[string][]K {
