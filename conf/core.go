@@ -152,9 +152,19 @@ func (c *Core[B]) PrepareJobScheduler() {
 	c.AddService(c.JobScheduler)
 }
 
-func (c *Core[B]) PrepareUDSService(sockPath string, cmdStore *uds.CommandStore) {
-	c.UDSService = uds.NewService(c.RootCtx, sockPath, cmdStore)
+func (c *Core[B]) PrepareUDSService(cmdStore *uds.CommandStore) error {
+	confFilePath := filepath.Join(c.AppRoot, "config", ".uds.json")
+	confBytes, err := os.ReadFile(confFilePath) // ([]byte, error)
+	if err != nil {
+		return err
+	}
+	conf := uds.Conf{}
+	if err = json.Unmarshal(confBytes, &conf); err != nil {
+		return err
+	}
+	c.UDSService = uds.NewService(c.RootCtx, conf, cmdStore)
 	c.AddService(c.UDSService)
+	return nil
 }
 
 func (c *Core[B]) PrepareWebService(addr string, router http.Handler) {

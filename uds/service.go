@@ -16,7 +16,7 @@ import (
 
 type Service struct {
 	*CommandStore // [Embedded]
-	SocketPath    string
+	Conf          Conf
 	Ctx           context.Context // Service Context
 
 	cancel   context.CancelFunc // Service Context CancelFunc
@@ -29,14 +29,14 @@ func (s *Service) Name() string {
 	return "UDSService"
 }
 
-func NewService(parentCtx context.Context, sockPath string, cmdStore *CommandStore) *Service {
+func NewService(parentCtx context.Context, conf Conf, cmdStore *CommandStore) *Service {
 	svcCtx, svcCancel := context.WithCancel(parentCtx)
 	return &Service{
 		Ctx:          svcCtx,
 		cancel:       svcCancel,
 		state:        svc.StateREADY,
 		done:         make(chan error, 1),
-		SocketPath:   sockPath,
+		Conf:         conf,
 		CommandStore: cmdStore,
 	}
 }
@@ -46,17 +46,17 @@ func NewService(parentCtx context.Context, sockPath string, cmdStore *CommandSto
 // Runtime errors are pushed into Done().
 func (s *Service) Start() error {
 	// clean up old socket if any
-	_ = os.Remove(s.SocketPath)
-	listener, err := net.Listen("unix", s.SocketPath)
+	_ = os.Remove(s.Conf.SocketPath)
+	listener, err := net.Listen("unix", s.Conf.SocketPath)
 	if err != nil {
-		return fmt.Errorf("listen(%q) failed: %v", s.SocketPath, err)
+		return fmt.Errorf("listen(%q) failed: %v", s.Conf.SocketPath, err)
 	}
 	s.listener = listener
 	// tighten permissions immediately after binding
-	if err = os.Chmod(s.SocketPath, 0600); err != nil {
+	if err = os.Chmod(s.Conf.SocketPath, 0600); err != nil {
 		_ = s.listener.Close()
-		_ = os.Remove(s.SocketPath)
-		return fmt.Errorf("chmod(%q) failed: %w", s.SocketPath, err)
+		_ = os.Remove(s.Conf.SocketPath)
+		return fmt.Errorf("chmod(%q) failed: %w", s.Conf.SocketPath, err)
 	}
 	go s.run()
 	return nil
@@ -82,13 +82,13 @@ func (s *Service) run() {
 			log.Printf("[ERROR][UDS] cannot close listener: %v", err)
 		}
 		// To avoid TOCTOU race, just try removing before checking if it exists.
-		if err := os.Remove(s.SocketPath); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(s.Conf.SocketPath); err != nil && !os.IsNotExist(err) {
 			log.Printf("[ERROR][UDS] cannot remove socket file: %v", err)
 		}
 	}()
 
 	// --- Serving loop ---
-	log.Printf("[INFO][UDS] listening on %q ...\n", s.SocketPath)
+	log.Printf("[INFO][UDS] listening on %q ...\n", s.Conf.SocketPath)
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
