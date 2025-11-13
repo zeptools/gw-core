@@ -27,6 +27,7 @@ import (
 	"github.com/zeptools/gw-core/storages"
 	"github.com/zeptools/gw-core/svc"
 	"github.com/zeptools/gw-core/throttle"
+	"github.com/zeptools/gw-core/tpl"
 	"github.com/zeptools/gw-core/uds"
 	"github.com/zeptools/gw-core/web"
 	"github.com/zeptools/gw-core/web/session"
@@ -42,22 +43,23 @@ type Core[B comparable] struct {
 	AppRoot             string                                           `json:"-"`          // Filled from compiled paths
 	RootCtx             context.Context                                  `json:"-"`          // Global Context with RootCancel
 	RootCancel          context.CancelFunc                               `json:"-"`          // CancelFunc for RootCtx
-	UDSService          *uds.Service                                     `json:"-"`          // PrepareUDSService()
-	JobScheduler        *schedjobs.Scheduler                             `json:"-"`          // PrepareJobScheduler()
-	WebService          *web.Service                                     `json:"-"`          // PrepareWebService()
-	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"`          // PrepareThrottleBucketStore()
+	UDSService          *uds.Service                                     `json:"-"`          // PrepareUDSService
+	JobScheduler        *schedjobs.Scheduler                             `json:"-"`          // PrepareJobScheduler
+	WebService          *web.Service                                     `json:"-"`          // PrepareWebService
+	ThrottleBucketStore *throttle.BucketStore[B]                         `json:"-"`          // PrepareThrottleBucketStore
 	VolatileKV          *sync.Map                                        `json:"-"`          // map[string]string
 	SessionLocks        *sync.Map                                        `json:"-"`          // map[string]*sync.Mutex for ServiceSessions and WebSessions
 	ActionLocks         *sync.Map                                        `json:"-"`          // map[string]struct{}
-	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf()
+	StorageConf         storages.Conf                                    `json:"-"`          // LoadStorageConf
 	BackendHttpClient   *http.Client                                     `json:"-"`          // for requests to external apis
-	KVDBConf            kvdb.Conf                                        `json:"-"`          // loadKVDBConf()
-	BackendKVDBClient   kvdb.Client                                      `json:"-"`          // prepareKVDBClient()
-	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // loadSQLDBConfs()
-	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // prepareSQLDBClients()
-	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps()
-	WebSessionManager   *session.Manager                                 `json:"-"`          // PrepareWebSessions()
-	MainBackendClient   *mainbackend.Client                              `json:"-"`          // PrepareMainBackendClient()
+	KVDBConf            kvdb.Conf                                        `json:"-"`          // loadKVDBConf
+	BackendKVDBClient   kvdb.Client                                      `json:"-"`          // prepareKVDBClient
+	SQLDBConfs          map[string]*sqldb.Conf                           `json:"-"`          // loadSQLDBConfs
+	BackendSQLDBClients map[string]sqldb.Client                          `json:"-"`          // prepareSQLDBClients
+	ClientApps          atomic.Pointer[map[string]clients.ClientAppConf] `json:"-"`          // [Hot Reload] PrepareClientApps
+	WebSessionManager   *session.Manager                                 `json:"-"`          // PrepareWebSessions
+	MainBackendClient   *mainbackend.Client                              `json:"-"`          // PrepareMainBackendClient
+	HTMLTemplateStore   *tpl.HTMLTemplateStore                           `json:"-"`          // PrepareHTMLTemplateStore
 
 	services []svc.Service // Services to Manage
 	done     chan error
@@ -379,6 +381,14 @@ func (c *Core[B]) PrepareMainBackendClient() error {
 		Client: c.BackendHttpClient,
 	}
 	if err = json.Unmarshal(confBytes, &c.MainBackendClient.Conf); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Core[B]) PrepareHTMLTemplateStore(tplRoot string, fileSuffix string) error {
+	c.HTMLTemplateStore = tpl.NewHTMLTemplateStore()
+	if err := c.HTMLTemplateStore.LoadBaseTemplates(tplRoot, fileSuffix); err != nil {
 		return err
 	}
 	return nil
