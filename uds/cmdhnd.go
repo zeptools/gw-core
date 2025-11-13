@@ -18,32 +18,29 @@ type CommandGroup struct {
 	displayOrder []string
 }
 
-func NewCommandGroup(name string) *CommandGroup {
-	return &CommandGroup{
+func NewCommandGroup(name string, handlers []CommandHandler) *CommandGroup {
+	g := &CommandGroup{
 		name:         name,
 		handlerMap:   make(map[string]CommandHandler),
 		displayOrder: make([]string, 0),
 	}
+	g.AddMany(handlers)
+	return g
 }
 
-func (g *CommandGroup) Add(handler CommandHandler) error {
+func (g *CommandGroup) Add(handler CommandHandler) {
 	cmd := handler.Command()
-	_, exists := g.handlerMap[cmd]
-	if exists {
-		return fmt.Errorf("command %q already exists", cmd)
+	if _, exists := g.handlerMap[cmd]; exists {
+		return
 	}
 	g.handlerMap[cmd] = handler
 	g.displayOrder = append(g.displayOrder, cmd)
-	return nil
 }
 
-func (g *CommandGroup) AddMany(handlers []CommandHandler) error {
+func (g *CommandGroup) AddMany(handlers []CommandHandler) {
 	for _, handler := range handlers {
-		if err := g.Add(handler); err != nil {
-			return err
-		}
+		g.Add(handler)
 	}
-	return nil
 }
 
 type CommandStore struct {
@@ -52,38 +49,36 @@ type CommandStore struct {
 	groupDisplayOrder []string
 }
 
-func NewCommandStore() *CommandStore {
-	return &CommandStore{
+func NewCommandStore(cmdGroups []*CommandGroup) *CommandStore {
+	s := &CommandStore{
 		handlerMap:        make(map[string]CommandHandler),
 		groupMap:          make(map[string]*CommandGroup),
 		groupDisplayOrder: make([]string, 0),
 	}
+	s.AddMany(cmdGroups)
+	return s
 }
 
-func (s *CommandStore) Add(cmdGroup *CommandGroup) error {
+func (s *CommandStore) Add(cmdGroup *CommandGroup) {
 	_, exists := s.groupMap[cmdGroup.name]
 	if exists {
-		return fmt.Errorf("command group %q already exists", cmdGroup.name)
+		return
 	}
-	s.groupMap[cmdGroup.name] = cmdGroup
 	s.groupDisplayOrder = append(s.groupDisplayOrder, cmdGroup.name)
+	s.groupMap[cmdGroup.name] = cmdGroup
+
 	for cmd, handler := range cmdGroup.handlerMap {
-		_, exists = s.handlerMap[cmd]
-		if exists {
-			return fmt.Errorf("command %q already exists", cmd)
+		if _, exists := s.handlerMap[cmd]; exists {
+			continue
 		}
 		s.handlerMap[cmd] = handler
 	}
-	return nil
 }
 
-func (s *CommandStore) AddMany(cmdGroups []*CommandGroup) error {
+func (s *CommandStore) AddMany(cmdGroups []*CommandGroup) {
 	for _, cmdGroup := range cmdGroups {
-		if err := s.Add(cmdGroup); err != nil {
-			return err
-		}
+		s.Add(cmdGroup)
 	}
-	return nil
 }
 
 func (s *CommandStore) GetHandler(cmd string) (CommandHandler, bool) {
@@ -109,10 +104,4 @@ func (s *CommandStore) PrintHelp(w io.Writer) {
 		_, _ = fmt.Fprintln(w)
 	}
 	_, _ = fmt.Fprintln(w)
-}
-
-type CmdHnd struct {
-	Desc  string
-	Usage string
-	Fn    func(args []string, w io.Writer) error
 }
