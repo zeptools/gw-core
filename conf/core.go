@@ -386,9 +386,11 @@ func (c *Core[B]) PrepareMainBackendClient() error {
 	return nil
 }
 
-func (c *Core[B]) PrepareHTMLTemplateStore(tplRoot string) error {
+func (c *Core[B]) PrepareHTMLTemplateStore() error {
 	c.HTMLTemplateStore = tpl.NewHTMLTemplateStore()
-	return c.HTMLTemplateStore.LoadBaseTemplates(tplRoot)
+	return c.HTMLTemplateStore.LoadBaseTemplates(
+		filepath.Join(c.AppRoot, "templates", "html"),
+	)
 }
 
 func (c *Core[B]) ResourceCleanUp() {
