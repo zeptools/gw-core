@@ -103,7 +103,7 @@ func (c *Client) Set(ctx context.Context, key string, value any, expiration time
 //---- List Ops ----
 
 func (c *Client) Push(ctx context.Context, key, value string) error {
-	// Add to the tail (right) of the list
+	// AddHandlers to the tail (right) of the list
 	return c.internal.RPush(ctx, key, value).Err()
 }
 

@@ -18,28 +18,24 @@ type CommandGroup struct {
 	displayOrder []string
 }
 
-func NewCommandGroup(name string, handlers []CommandHandler) *CommandGroup {
+func NewCommandGroup(name string, handlers ...CommandHandler) *CommandGroup {
 	g := &CommandGroup{
 		name:         name,
 		handlerMap:   make(map[string]CommandHandler),
 		displayOrder: make([]string, 0),
 	}
-	g.AddMany(handlers)
+	g.AddHandlers(handlers...)
 	return g
 }
 
-func (g *CommandGroup) Add(handler CommandHandler) {
-	cmd := handler.Command()
-	if _, exists := g.handlerMap[cmd]; exists {
-		return
-	}
-	g.handlerMap[cmd] = handler
-	g.displayOrder = append(g.displayOrder, cmd)
-}
-
-func (g *CommandGroup) AddMany(handlers []CommandHandler) {
+func (g *CommandGroup) AddHandlers(handlers ...CommandHandler) {
 	for _, handler := range handlers {
-		g.Add(handler)
+		cmd := handler.Command()
+		if _, exists := g.handlerMap[cmd]; exists {
+			continue
+		}
+		g.handlerMap[cmd] = handler
+		g.displayOrder = append(g.displayOrder, cmd)
 	}
 }
 
@@ -49,35 +45,31 @@ type CommandStore struct {
 	groupDisplayOrder []string
 }
 
-func NewCommandStore(cmdGroups []*CommandGroup) *CommandStore {
+func NewCommandStore(cmdGroups ...*CommandGroup) *CommandStore {
 	s := &CommandStore{
 		handlerMap:        make(map[string]CommandHandler),
 		groupMap:          make(map[string]*CommandGroup),
 		groupDisplayOrder: make([]string, 0),
 	}
-	s.AddMany(cmdGroups)
+	s.AddGroups(cmdGroups...)
 	return s
 }
 
-func (s *CommandStore) Add(cmdGroup *CommandGroup) {
-	_, exists := s.groupMap[cmdGroup.name]
-	if exists {
-		return
-	}
-	s.groupDisplayOrder = append(s.groupDisplayOrder, cmdGroup.name)
-	s.groupMap[cmdGroup.name] = cmdGroup
-
-	for cmd, handler := range cmdGroup.handlerMap {
-		if _, exists := s.handlerMap[cmd]; exists {
+func (s *CommandStore) AddGroups(cmdGroups ...*CommandGroup) {
+	for _, cmdGroup := range cmdGroups {
+		_, exists := s.groupMap[cmdGroup.name]
+		if exists {
 			continue
 		}
-		s.handlerMap[cmd] = handler
-	}
-}
+		s.groupDisplayOrder = append(s.groupDisplayOrder, cmdGroup.name)
+		s.groupMap[cmdGroup.name] = cmdGroup
 
-func (s *CommandStore) AddMany(cmdGroups []*CommandGroup) {
-	for _, cmdGroup := range cmdGroups {
-		s.Add(cmdGroup)
+		for cmd, handler := range cmdGroup.handlerMap {
+			if _, exists := s.handlerMap[cmd]; exists {
+				continue
+			}
+			s.handlerMap[cmd] = handler
+		}
 	}
 }
 
