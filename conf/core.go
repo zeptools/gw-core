@@ -386,12 +386,9 @@ func (c *Core[B]) PrepareMainBackendClient() error {
 	return nil
 }
 
-func (c *Core[B]) PrepareHTMLTemplateStore(tplRoot string, fileSuffix string) error {
+func (c *Core[B]) PrepareHTMLTemplateStore(tplRoot string) error {
 	c.HTMLTemplateStore = tpl.NewHTMLTemplateStore()
-	if err := c.HTMLTemplateStore.LoadBaseTemplates(tplRoot, fileSuffix); err != nil {
-		return err
-	}
-	return nil
+	return c.HTMLTemplateStore.LoadBaseTemplates(tplRoot)
 }
 
 func (c *Core[B]) ResourceCleanUp() {
