@@ -1,4 +1,4 @@
-package app
+package application
 
 import (
 	"context"
@@ -37,7 +37,7 @@ import (
 // B = Throttle BucketID Type _ e.g. string, int64, etc
 type Core[B comparable] struct {
 	AppName             string                                           `json:"app_name"`
-	Listen              string                                           `json:"listen"`     // HTTP Server Listen IP:PORT Address
+	Listen              string                                           `json:"listen"`     // HTTP Application Listen IP:PORT Address
 	Host                string                                           `json:"host"`       // HTTP Host. Can be used to generate public url endpoints
 	DebugOpts           DebugOpts                                        `json:"debug_opts"` // Debug Options
 	AppRoot             string                                           `json:"-"`          // Filled from compiled paths
