@@ -47,13 +47,14 @@ func NewService(parentCtx context.Context, conf Conf, cmdStore *CommandStore) *S
 func (s *Service) Start() error {
 	// clean up old socket if any
 	_ = os.Remove(s.Conf.SocketPath)
+	// create socket
 	listener, err := net.Listen("unix", s.Conf.SocketPath)
 	if err != nil {
 		return fmt.Errorf("listen(%q) failed: %v", s.Conf.SocketPath, err)
 	}
 	s.listener = listener
 	// tighten permissions immediately after binding
-	if err = os.Chmod(s.Conf.SocketPath, 0600); err != nil {
+	if err = os.Chmod(s.Conf.SocketPath, 0660); err != nil {
 		_ = s.listener.Close()
 		_ = os.Remove(s.Conf.SocketPath)
 		return fmt.Errorf("chmod(%q) failed: %w", s.Conf.SocketPath, err)
