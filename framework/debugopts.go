@@ -1,4 +1,4 @@
-package application
+package framework
 
 type DebugOpts struct {
 	MaintenanceMode int `json:"maintenance_mode"`
